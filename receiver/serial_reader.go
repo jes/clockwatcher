@@ -11,14 +11,14 @@ import (
 )
 
 type Reading struct {
-	Timestamp   uint32 `json:"timestamp"`
-	TotalMicros uint64 `json:"total_micros"`
-	Count       int    `json:"count"`
+	Timestamp   uint32 `json:"Timestamp"`
+	TotalMicros uint64 `json:"TotalMicros"`
+	Count       int    `json:"Count"`
 }
 
 type StatusMessage struct {
-	Status string `json:"status"`
-	Error  string `json:"error,omitempty"`
+	Status string `json:"Status"`
+	Error  string `json:"Error,omitempty"`
 }
 
 type SerialReader struct {
@@ -77,11 +77,17 @@ func (sr *SerialReader) StartReading(readings chan<- Reading) {
 		}
 
 		totalMicroseconds := uint64(timestamp) + (sr.overflowCount * 0xFFFFFFFF)
-		readings <- Reading{
+		reading := Reading{
 			Timestamp:   timestamp,
 			TotalMicros: totalMicroseconds,
 			Count:       sr.count,
 		}
+
+		// Log the reading to stdout
+		fmt.Printf("Reading: timestamp=%d, total_micros=%d, count=%d\n",
+			reading.Timestamp, reading.TotalMicros, reading.Count)
+
+		readings <- reading
 	}
 }
 

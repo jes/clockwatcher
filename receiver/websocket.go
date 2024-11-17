@@ -78,6 +78,12 @@ func (s *WebSocketServer) handleConnections(w http.ResponseWriter, r *http.Reque
 
 func (s *WebSocketServer) handleBroadcasts() {
 	for msg := range s.broadcast {
+		// Log the received message
+		if reading, ok := msg.(Reading); ok {
+			log.Printf("Broadcasting reading: timestamp=%d, total_micros=%d, count=%d",
+				reading.Timestamp, reading.TotalMicros, reading.Count)
+		}
+
 		s.clientsMux.Lock()
 		message, err := json.Marshal(msg)
 		if err != nil {
