@@ -83,10 +83,6 @@ func (sr *SerialReader) StartReading(readings chan<- Reading) {
 			Count:       sr.count,
 		}
 
-		// Log the reading to stdout
-		fmt.Printf("Reading: timestamp=%d, total_micros=%d, count=%d\n",
-			reading.Timestamp, reading.TotalMicros, reading.Count)
-
 		readings <- reading
 	}
 }

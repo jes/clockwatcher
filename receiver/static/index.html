@@ -137,28 +137,13 @@
         };
 
         ws.onmessage = function(event) {
-            // Log every incoming message immediately
-            console.log('WebSocket message received:', event.data);
-            
             try {
                 const message = JSON.parse(event.data);
-                // Log the parsed message
-                console.log('Parsed message:', message);
                 
                 if (message.Timestamp !== undefined) {
-                    // Log the incoming data
-                    console.log(`Frontend received reading: timestamp=${message.Timestamp}, total_micros=${message.TotalMicros}, count=${message.Count}`);
-                    
-                    // Convert and store the new data point
                     const timeMs = message.TotalMicros / 1000;  // Convert to milliseconds
                     timestamps.push(timeMs);
                     counts.push(message.Count);
-
-                    // Log the arrays after pushing new data
-                    console.log('Current data arrays:', {
-                        timestamps: timestamps.slice(-5),  // Show last 5 points
-                        counts: counts.slice(-5)
-                    });
 
                     // Keep only last maxPoints
                     if (timestamps.length > maxPoints) {
@@ -166,28 +151,18 @@
                         counts = counts.slice(-maxPoints);
                     }
 
-                    // Log the update attempt
-                    console.log('Attempting Plotly update with:', {
-                        x: [timestamps],
-                        y: [counts]
-                    });
-
-                    // Update the plot and add error handling
+                    // Update the plot
                     Plotly.update('chart', {
                         x: [timestamps],
                         y: [counts]
-                    }).then(() => {
-                        console.log('Plot updated successfully');
                     }).catch(error => {
                         console.error('Error updating plot:', error);
                     });
                 } else {
-                    // Log if message doesn't have expected structure
-                    console.log('Message received but no Timestamp field:', message);
+                    console.log('Unhandled message:', message);
                 }
             } catch (error) {
                 console.error('Error processing WebSocket message:', error);
-                console.error('Message that caused error:', event.data);
             }
         };
 
