@@ -8,9 +8,46 @@
             width: 100%;
             height: 600px;
         }
+        #status {
+            margin: 20px 0;
+            font-family: Arial, sans-serif;
+        }
+        #status span {
+            display: inline-block;
+            margin-right: 10px;
+            padding: 5px 10px;
+            border-radius: 4px;
+            color: #fff;
+        }
+        .status-ok { background-color: #28a745; }
+        .status-error { background-color: #dc3545; }
+        .status-info { background-color: #17a2b8; }
+        #device-selection {
+            margin: 20px 0;
+            font-family: Arial, sans-serif;
+        }
+        #device-selection select, #device-selection button {
+            padding: 5px 10px;
+            margin-right: 10px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
     </style>
 </head>
 <body>
+    <h1>Encoder Dashboard</h1>
+    <div id="status">
+        <span id="serial-status" class="status-info">Serial: Not Connected</span>
+        <span id="ws-status" class="status-info">WebSocket: Connected</span>
+    </div>
+
+    <div id="device-selection">
+        <select id="serial-ports">
+            <option value="">Select Serial Port</option>
+        </select>
+        <button id="connect-btn">Connect</button>
+    </div>
+
     <div id="chart"></div>
     <script>
         const maxPoints = 500;
@@ -33,34 +70,124 @@
 
         Plotly.newPlot('chart', [trace], layout);
 
+        // Connection Status Elements
+        const serialStatus = document.getElementById('serial-status');
+        const wsStatus = document.getElementById('ws-status');
+
+        // Device Selection Elements
+        const serialPortsSelect = document.getElementById('serial-ports');
+        const connectBtn = document.getElementById('connect-btn');
+
+        // Fetch available serial ports on load
+        window.onload = function() {
+            fetch('/serial_ports')
+                .then(response => response.json())
+                .then(data => {
+                    data.forEach(port => {
+                        const option = document.createElement('option');
+                        option.value = port;
+                        option.textContent = port;
+                        serialPortsSelect.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching serial ports:', error);
+                });
+        };
+
+        // Handle Connect Button Click
+        connectBtn.addEventListener('click', () => {
+            const selectedPort = serialPortsSelect.value;
+            if (!selectedPort) {
+                alert('Please select a serial port.');
+                return;
+            }
+
+            const baudRate = 115200; // You can make this configurable if needed
+
+            fetch('/connect', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ port_name: selectedPort, baud_rate: baudRate }),
+            })
+            .then(response => {
+                if (response.ok) {
+                    serialStatus.textContent = `Serial: Connected to ${selectedPort}`;
+                    serialStatus.className = 'status-ok';
+                } else {
+                    return response.text().then(text => { throw new Error(text) });
+                }
+            })
+            .catch(error => {
+                console.error('Error connecting to serial port:', error);
+                serialStatus.textContent = 'Serial: Connection Failed';
+                serialStatus.className = 'status-error';
+            });
+        });
+
         // Connect to WebSocket
         const ws = new WebSocket(`ws://${window.location.host}/ws`);
         
+        ws.onopen = function() {
+            wsStatus.textContent = 'WebSocket: Connected';
+            wsStatus.className = 'status-ok';
+        };
+
         ws.onmessage = function(event) {
-            const reading = JSON.parse(event.data);
+            const message = JSON.parse(event.data);
             
-            timestamps.push(reading.TotalMicros / 1000); // Convert to milliseconds
-            counts.push(reading.Count);
+            if (message.Timestamp !== undefined) {
+                // It's a Reading
+                timestamps.push(message.TotalMicros / 1000); // Convert to milliseconds
+                counts.push(message.Count);
 
-            // Keep only last maxPoints
-            if (timestamps.length > maxPoints) {
-                timestamps = timestamps.slice(-maxPoints);
-                counts = counts.slice(-maxPoints);
+                // Keep only last maxPoints
+                if (timestamps.length > maxPoints) {
+                    timestamps = timestamps.slice(-maxPoints);
+                    counts = counts.slice(-maxPoints);
+                }
+
+                Plotly.update('chart', {
+                    x: [timestamps],
+                    y: [counts]
+                });
+            } else if (message.Status !== undefined) {
+                // It's a Status Message
+                updateStatus(message);
             }
-
-            Plotly.update('chart', {
-                x: [timestamps],
-                y: [counts]
-            });
         };
 
         ws.onerror = function(error) {
             console.error('WebSocket error:', error);
+            wsStatus.textContent = 'WebSocket: Error';
+            wsStatus.className = 'status-error';
         };
 
         ws.onclose = function() {
             console.log('WebSocket connection closed');
+            wsStatus.textContent = 'WebSocket: Disconnected';
+            wsStatus.className = 'status-error';
         };
+
+        function updateStatus(message) {
+            if (message.Status.startsWith("Serial")) {
+                if (message.Status === "No serial device connected") {
+                    serialStatus.textContent = 'Serial: Not Connected';
+                    serialStatus.className = 'status-error';
+                } else if (message.Status === "Serial Reader Started") {
+                    serialStatus.textContent = 'Serial: Connected';
+                    serialStatus.className = 'status-ok';
+                } else if (message.Status === "Overflow") {
+                    serialStatus.textContent = `Serial: Overflow (${message.Error})`;
+                    serialStatus.className = 'status-info';
+                } else if (message.Status === "Serial Error") {
+                    serialStatus.textContent = `Serial: Error (${message.Error})`;
+                    serialStatus.className = 'status-error';
+                }
+            }
+        }
     </script>
 </body>
 </html> 

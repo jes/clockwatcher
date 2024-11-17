@@ -1,52 +1,107 @@
 package main
 
 import (
-	"flag"
+	"encoding/json"
 	"log"
-	"os"
+	"net/http"
+	"sync"
 
 	"go.bug.st/serial"
 )
 
-func main() {
-	portName := flag.String("port", "/dev/ttyUSB0", "Serial port name")
-	baudRate := flag.Int("baud", 115200, "Baud rate")
-	flag.Parse()
+type Server struct {
+	wsServer   *WebSocketServer
+	readings   chan Reading
+	statusChan chan StatusMessage
+	serialPort serial.Port
+	serialMux  sync.Mutex
+}
 
-	mode := &serial.Mode{BaudRate: *baudRate}
-	port, err := serial.Open(*portName, mode)
+func NewServer() *Server {
+	ws := NewWebSocketServer()
+	return &Server{
+		wsServer:   ws,
+		readings:   make(chan Reading),
+		statusChan: make(chan StatusMessage),
+	}
+}
+
+func (s *Server) Start() {
+	go s.wsServer.Start()
+
+	http.HandleFunc("/serial_ports", s.handleListSerialPorts)
+	http.HandleFunc("/connect", s.handleConnectSerialPort)
+
+	go s.broadcastMessages()
+
+	// Block main goroutine
+	select {}
+}
+
+func (s *Server) broadcastMessages() {
+	for {
+		select {
+		case reading := <-s.readings:
+			s.wsServer.Broadcast(reading)
+		case status := <-s.statusChan:
+			s.wsServer.Broadcast(status)
+		}
+	}
+}
+
+func (s *Server) handleListSerialPorts(w http.ResponseWriter, r *http.Request) {
+	ports, err := serial.GetPortsList()
 	if err != nil {
-		log.Fatalf("Failed to open serial port: %v", err)
+		http.Error(w, "Failed to list serial ports", http.StatusInternalServerError)
+		return
 	}
-	defer port.Close()
 
-	// Create channel for readings
-	readings := make(chan Reading)
+	json.NewEncoder(w).Encode(ports)
+}
 
-	// Create and start WebSocket server
-	wsServer := NewWebSocketServer()
-	wsServer.Start()
-
-	// Create and start serial reader
-	reader := NewSerialReader(port)
-	go func() {
-		if err := reader.StartReading(readings); err != nil {
-			log.Fatalf("Error reading from serial port: %v", err)
-		}
-	}()
-
-	// Create and start CSV writer
-	csvWriter := NewCSVWriter(os.Stdout)
-	defer csvWriter.Close()
-
-	// Start processing readings
-	for reading := range readings {
-		// Send to WebSocket clients
-		wsServer.broadcast <- reading
-
-		// Write to CSV
-		if err := csvWriter.WriteReading(reading); err != nil {
-			log.Printf("Error writing CSV: %v", err)
-		}
+func (s *Server) handleConnectSerialPort(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
 	}
+
+	var req struct {
+		PortName string `json:"port_name"`
+		BaudRate int    `json:"baud_rate"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	s.serialMux.Lock()
+	defer s.serialMux.Unlock()
+
+	// Close existing port if connected
+	if s.serialPort != nil {
+		s.serialPort.Close()
+		s.serialPort = nil
+	}
+
+	mode := &serial.Mode{BaudRate: req.BaudRate}
+	port, err := serial.Open(req.PortName, mode)
+	if err != nil {
+		log.Printf("Failed to open serial port %s: %v", req.PortName, err)
+		s.statusChan <- StatusMessage{Status: "Serial Error", Error: err.Error()}
+		http.Error(w, "Failed to open serial port", http.StatusInternalServerError)
+		return
+	}
+
+	s.serialPort = port
+	serialReader := NewSerialReader(port, s.statusChan)
+	go serialReader.StartReading(s.readings)
+
+	s.statusChan <- StatusMessage{Status: "Serial Connected", Error: req.PortName}
+	w.WriteHeader(http.StatusOK)
+}
+
+func main() {
+	server := NewServer()
+	server.Start()
 }

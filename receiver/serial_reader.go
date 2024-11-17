@@ -5,14 +5,20 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"time"
 
 	"go.bug.st/serial"
 )
 
 type Reading struct {
-	Timestamp   uint32
-	TotalMicros uint64
-	Count       int
+	Timestamp   uint32 `json:"timestamp"`
+	TotalMicros uint64 `json:"total_micros"`
+	Count       int    `json:"count"`
+}
+
+type StatusMessage struct {
+	Status string `json:"status"`
+	Error  string `json:"error,omitempty"`
 }
 
 type SerialReader struct {
@@ -22,22 +28,32 @@ type SerialReader struct {
 	overflowCount     uint64
 	count             int
 	consecutiveErrors int
+	statusChan        chan StatusMessage
 }
 
-func NewSerialReader(port serial.Port) *SerialReader {
+func NewSerialReader(port serial.Port, statusChan chan StatusMessage) *SerialReader {
 	return &SerialReader{
-		port:   port,
-		buffer: make([]byte, 5),
+		port:       port,
+		buffer:     make([]byte, 5),
+		statusChan: statusChan,
 	}
 }
 
-// StartReading begins reading from the serial port and sends readings to the provided channel
-func (sr *SerialReader) StartReading(readings chan<- Reading) error {
+func (sr *SerialReader) StartReading(readings chan<- Reading) {
+	// Notify that serial reading has started
+	sr.statusChan <- StatusMessage{Status: "Serial Reader Started"}
+
 	const maxConsecutiveErrors = 10
 
 	for {
 		if sr.consecutiveErrors >= maxConsecutiveErrors {
-			return fmt.Errorf("too many consecutive read errors (%d)", sr.consecutiveErrors)
+			errMsg := fmt.Sprintf("Too many consecutive read errors (%d)", sr.consecutiveErrors)
+			log.Println(errMsg)
+			sr.statusChan <- StatusMessage{Status: "Error", Error: errMsg}
+			// Reset error count to continue reading
+			sr.consecutiveErrors = 0
+			time.Sleep(2 * time.Second) // Wait before retrying
+			continue
 		}
 
 		timestamp, direction, ok := sr.readAndValidatePacket()
@@ -49,6 +65,7 @@ func (sr *SerialReader) StartReading(readings chan<- Reading) error {
 		if timestamp < sr.lastTimestamp {
 			sr.overflowCount++
 			log.Printf("Timestamp overflow detected! Count: %d", sr.overflowCount)
+			sr.statusChan <- StatusMessage{Status: "Overflow", Error: fmt.Sprintf("Overflow count: %d", sr.overflowCount)}
 		}
 		sr.lastTimestamp = timestamp
 
@@ -74,12 +91,14 @@ func (sr *SerialReader) readAndValidatePacket() (uint32, uint8, bool) {
 	if err != nil || n != 5 {
 		log.Printf("Error reading from serial: %v", err)
 		sr.consecutiveErrors++
+		sr.statusChan <- StatusMessage{Status: "Serial Error", Error: err.Error()}
 		return 0, 0, false
 	}
 	sr.consecutiveErrors = 0
 
 	if sr.isOverflow() {
 		log.Println("Buffer overflow detected!")
+		sr.statusChan <- StatusMessage{Status: "Overflow", Error: "Buffer overflow detected"}
 		return 0, 0, false
 	}
 
