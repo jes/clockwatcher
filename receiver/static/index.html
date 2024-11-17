@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Encoder Readings</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        #chart {
+            width: 100%;
+            height: 600px;
+        }
+    </style>
+</head>
+<body>
+    <div id="chart"></div>
+    <script>
+        const maxPoints = 500;
+        let timestamps = [];
+        let counts = [];
+
+        // Initialize the plot
+        const trace = {
+            x: timestamps,
+            y: counts,
+            mode: 'lines',
+            name: 'Position'
+        };
+
+        const layout = {
+            title: 'Encoder Position',
+            xaxis: { title: 'Time (ms)' },
+            yaxis: { title: 'Position' }
+        };
+
+        Plotly.newPlot('chart', [trace], layout);
+
+        // Connect to WebSocket
+        const ws = new WebSocket(`ws://${window.location.host}/ws`);
+        
+        ws.onmessage = function(event) {
+            const reading = JSON.parse(event.data);
+            
+            timestamps.push(reading.TotalMicros / 1000); // Convert to milliseconds
+            counts.push(reading.Count);
+
+            // Keep only last maxPoints
+            if (timestamps.length > maxPoints) {
+                timestamps = timestamps.slice(-maxPoints);
+                counts = counts.slice(-maxPoints);
+            }
+
+            Plotly.update('chart', {
+                x: [timestamps],
+                y: [counts]
+            });
+        };
+
+        ws.onerror = function(error) {
+            console.error('WebSocket error:', error);
+        };
+
+        ws.onclose = function() {
+            console.log('WebSocket connection closed');
+        };
+    </script>
+</body>
+</html> 

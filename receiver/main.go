@@ -23,6 +23,10 @@ func main() {
 	// Create channel for readings
 	readings := make(chan Reading)
 
+	// Create and start WebSocket server
+	wsServer := NewWebSocketServer()
+	wsServer.Start()
+
 	// Create and start serial reader
 	reader := NewSerialReader(port)
 	go func() {
@@ -36,7 +40,13 @@ func main() {
 	defer csvWriter.Close()
 
 	// Start processing readings
-	if err := csvWriter.Start(readings); err != nil {
-		log.Fatalf("Error writing CSV: %v", err)
+	for reading := range readings {
+		// Send to WebSocket clients
+		wsServer.broadcast <- reading
+
+		// Write to CSV
+		if err := csvWriter.WriteReading(reading); err != nil {
+			log.Printf("Error writing CSV: %v", err)
+		}
 	}
 }

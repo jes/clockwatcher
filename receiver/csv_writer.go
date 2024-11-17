@@ -22,15 +22,11 @@ func (cw *CSVWriter) Start(readings <-chan Reading) error {
 		return fmt.Errorf("error writing CSV header: %v", err)
 	}
 
+	// Process readings using WriteReading
 	for reading := range readings {
-		if err := cw.writer.Write([]string{
-			fmt.Sprintf("%d", reading.Timestamp),
-			fmt.Sprintf("%d", reading.TotalMicros),
-			fmt.Sprintf("%d", reading.Count),
-		}); err != nil {
-			return fmt.Errorf("error writing CSV: %v", err)
+		if err := cw.WriteReading(reading); err != nil {
+			return err
 		}
-		cw.writer.Flush()
 	}
 
 	return nil
@@ -38,4 +34,16 @@ func (cw *CSVWriter) Start(readings <-chan Reading) error {
 
 func (cw *CSVWriter) Close() {
 	cw.writer.Flush()
+}
+
+func (cw *CSVWriter) WriteReading(reading Reading) error {
+	if err := cw.writer.Write([]string{
+		fmt.Sprintf("%d", reading.Timestamp),
+		fmt.Sprintf("%d", reading.TotalMicros),
+		fmt.Sprintf("%d", reading.Count),
+	}); err != nil {
+		return fmt.Errorf("error writing CSV: %v", err)
+	}
+	cw.writer.Flush()
+	return nil
 }
