@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"time"
 
@@ -28,29 +29,61 @@ func main() {
 	}
 	defer port.Close()
 
-	// Buffer for reading 4 bytes at a time (uint32)
-	buffer := make([]byte, 4)
+	// Buffer for reading 5 bytes at a time (4 for timestamp, 1 for direction+checksum)
+	buffer := make([]byte, 5)
+
+	var lastTimestamp uint32
+	var overflowCount uint64
 
 	for {
-		// Read exactly 4 bytes
-		_, err := port.Read(buffer)
-		if err != nil {
+		// Read exactly 5 bytes
+		n, err := io.ReadFull(port, buffer)
+		if err != nil || n != 5 {
 			log.Printf("Error reading from serial: %v", err)
 			continue
 		}
 
-		// Convert bytes to uint32
-		data := binary.BigEndian.Uint32(buffer)
+		// Calculate checksum
+		calculatedChecksum := uint8(0)
+		for i := 0; i < 4; i++ {
+			calculatedChecksum ^= buffer[i]
+		}
+		calculatedChecksum &= 0x7F
 
-		// Check for overflow marker
-		if data == 0xFFFFFFFF {
+		finalByte := buffer[4]
+		direction := (finalByte >> 7) & 1
+		receivedChecksum := finalByte & 0x7F
+
+		// Debug output
+		if calculatedChecksum != receivedChecksum {
+			log.Printf("Checksum mismatch! Bytes: %02x %02x %02x %02x, Final: %02x",
+				buffer[0], buffer[1], buffer[2], buffer[3], buffer[4])
+			log.Printf("Calculated: %02x, Received: %02x", calculatedChecksum, receivedChecksum)
+			continue
+		}
+
+		// Check for overflow marker (all five bytes should be 0xFF)
+		isOverflow := true
+		for i := 0; i < 5; i++ {
+			if buffer[i] != 0xFF {
+				isOverflow = false
+				break
+			}
+		}
+		if isOverflow {
 			log.Println("Buffer overflow detected!")
 			continue
 		}
 
-		// Extract direction and timestamp
-		direction := (data >> 31) & 1
-		timestamp := data & 0x7FFFFFFF // Remove direction bit
+		// Convert timestamp bytes to uint32
+		timestamp := binary.BigEndian.Uint32(buffer[:4])
+
+		// Detect timestamp overflow
+		if timestamp < lastTimestamp {
+			overflowCount++
+			log.Printf("Timestamp overflow detected! Count: %d", overflowCount)
+		}
+		lastTimestamp = timestamp
 
 		// Convert direction bit to string
 		dirString := "negative"
@@ -58,9 +91,11 @@ func main() {
 			dirString = "positive"
 		}
 
-		// Print timestamp (microseconds) and direction
-		fmt.Printf("Time: %s, Direction: %s\n",
+		// Print timestamp (microseconds) and direction with total time including overflows
+		totalMicroseconds := uint64(timestamp) + (overflowCount * 0xFFFFFFFF)
+		fmt.Printf("Time: %s (Total: %s), Direction: %s\n",
 			time.Duration(timestamp)*time.Microsecond,
+			time.Duration(totalMicroseconds)*time.Microsecond,
 			dirString)
 	}
 }
