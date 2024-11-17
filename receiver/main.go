@@ -2,11 +2,12 @@ package main
 
 import (
 	"encoding/binary"
+	"encoding/csv"
 	"flag"
 	"fmt"
 	"io"
 	"log"
-	"time"
+	"os"
 
 	"go.bug.st/serial"
 )
@@ -34,14 +35,29 @@ func main() {
 
 	var lastTimestamp uint32
 	var overflowCount uint64
+	var count int
+	const maxConsecutiveErrors = 10
+	consecutiveErrors := 0
+
+	// Set up CSV writer
+	csvWriter := csv.NewWriter(os.Stdout)
+	defer csvWriter.Flush()
+
+	// Write CSV header
+	csvWriter.Write([]string{"Timestamp_us", "Total_Time_us", "Count"})
 
 	for {
 		// Read exactly 5 bytes
 		n, err := io.ReadFull(port, buffer)
 		if err != nil || n != 5 {
 			log.Printf("Error reading from serial: %v", err)
+			consecutiveErrors++
+			if consecutiveErrors >= maxConsecutiveErrors {
+				log.Fatalf("Too many consecutive read errors (%d). Exiting.", consecutiveErrors)
+			}
 			continue
 		}
+		consecutiveErrors = 0 // Reset counter on successful read
 
 		// Calculate checksum
 		calculatedChecksum := uint8(0)
@@ -85,17 +101,23 @@ func main() {
 		}
 		lastTimestamp = timestamp
 
-		// Convert direction bit to string
-		dirString := "negative"
+		// Replace direction string logic with count tracking
 		if direction == 1 {
-			dirString = "positive"
+			count++
+		} else {
+			count--
 		}
 
 		// Print timestamp (microseconds) and direction with total time including overflows
 		totalMicroseconds := uint64(timestamp) + (overflowCount * 0xFFFFFFFF)
-		fmt.Printf("Time: %s (Total: %s), Direction: %s\n",
-			time.Duration(timestamp)*time.Microsecond,
-			time.Duration(totalMicroseconds)*time.Microsecond,
-			dirString)
+		err = csvWriter.Write([]string{
+			fmt.Sprintf("%d", timestamp),
+			fmt.Sprintf("%d", totalMicroseconds),
+			fmt.Sprintf("%d", count),
+		})
+		if err != nil {
+			log.Printf("Error writing CSV: %v", err)
+		}
+		csvWriter.Flush()
 	}
 }
