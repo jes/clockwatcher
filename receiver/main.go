@@ -99,6 +99,7 @@ func (s *Server) handleConnectSerialPort(w http.ResponseWriter, r *http.Request)
 	serialReader := NewSerialReader(port, s.statusChan)
 	go serialReader.StartReading(s.readings)
 
+	log.Printf("Connected to %s with baud rate %d", req.PortName, req.BaudRate)
 	w.WriteHeader(http.StatusOK)
 }
 
