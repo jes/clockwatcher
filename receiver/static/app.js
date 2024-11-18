@@ -89,6 +89,11 @@ class ClockWatcher {
                 title: 'Amplitude',
                 xaxis: { title: 'Time (s)' },
                 yaxis: { title: 'Amplitude (degrees)' }
+            },
+            amplitudePeriod: {
+                title: 'Amplitude vs Period',
+                xaxis: { title: 'Amplitude (degrees)' },
+                yaxis: { title: 'Period (s)' }
             }
         };
 
@@ -128,6 +133,14 @@ class ClockWatcher {
             mode: 'lines',
             name: 'Amplitude'
         }], layouts.amplitude);
+
+        // Initialize amplitude vs period plot
+        Plotly.newPlot('amplitude-period-chart', [{
+            x: this.amplitudeData,
+            y: this.periodData,
+            mode: 'markers',
+            name: 'Amplitude vs Period'
+        }], layouts.amplitudePeriod);
     }
 
     addReading(message) {
@@ -196,7 +209,8 @@ class ClockWatcher {
             { id: 'velocity-chart', data: smoothedVelocities },
             { id: 'acceleration-chart', data: smoothedAccelerations },
             { id: 'period-chart', x: this.periodTimestamps, y: this.periodData },
-            { id: 'amplitude-chart', x: this.amplitudeTimestamps, y: this.amplitudeData }
+            { id: 'amplitude-chart', x: this.amplitudeTimestamps, y: this.amplitudeData },
+            { id: 'amplitude-period-chart', x: this.amplitudeData, y: this.periodData }
         ];
 
         updates.forEach(({ id, data, x, y }) => {
