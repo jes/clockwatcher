@@ -6,7 +6,15 @@
     <style>
         #chart {
             width: 100%;
-            height: 600px;
+            height: 400px;
+        }
+        #velocity-chart {
+            width: 100%;
+            height: 400px;
+        }
+        #acceleration-chart {
+            width: 100%;
+            height: 400px;
         }
         #status {
             margin: 20px 0;
@@ -49,26 +57,65 @@
     </div>
 
     <div id="chart"></div>
+    <div id="velocity-chart"></div>
+    <div id="acceleration-chart"></div>
     <script>
         const maxPoints = 500;
         let timestamps = [];
         let counts = [];
+        let velocities = [];
+        let accelerations = [];
 
-        // Initialize the plot
-        const trace = {
+        // Update CSS for charts
+        document.getElementById('chart').style.height = '400px';
+        document.getElementById('velocity-chart').style.height = '400px';
+        document.getElementById('acceleration-chart').style.height = '400px';
+
+        // Initialize the position plot
+        const positionTrace = {
             x: timestamps,
             y: counts,
             mode: 'lines',
             name: 'Position'
         };
 
-        const layout = {
-            title: 'Encoder Position',
+        const positionLayout = {
+            title: 'Balance wheel position',
             xaxis: { title: 'Time (s)' },
             yaxis: { title: 'Position (degrees)' }
         };
 
-        Plotly.newPlot('chart', [trace], layout);
+        // Initialize the velocity plot
+        const velocityTrace = {
+            x: timestamps,
+            y: velocities,
+            mode: 'lines',
+            name: 'Velocity'
+        };
+
+        const velocityLayout = {
+            title: 'Balance wheel velocity',
+            xaxis: { title: 'Time (s)' },
+            yaxis: { title: 'Velocity (degrees/s)' }
+        };
+
+        // Initialize the acceleration plot
+        const accelerationTrace = {
+            x: timestamps,
+            y: accelerations,
+            mode: 'lines',
+            name: 'Acceleration'
+        };
+
+        const accelerationLayout = {
+            title: 'Balance wheel acceleration',
+            xaxis: { title: 'Time (s)' },
+            yaxis: { title: 'Acceleration (degrees/s²)' }
+        };
+
+        Plotly.newPlot('chart', [positionTrace], positionLayout);
+        Plotly.newPlot('velocity-chart', [velocityTrace], velocityLayout);
+        Plotly.newPlot('acceleration-chart', [accelerationTrace], accelerationLayout);
 
         // Connection Status Elements
         const serialStatus = document.getElementById('serial-status');
@@ -141,23 +188,60 @@
                 const message = JSON.parse(event.data);
                 
                 if (message.Timestamp !== undefined) {
-                    const timeSeconds = message.TotalMicros / 1000000;  // Convert to seconds
-                    const degrees = message.Count * 4;  // Convert position to degrees
+                    const timeSeconds = message.TotalMicros / 1000000;
+                    const degrees = message.Count * 4;
                     timestamps.push(timeSeconds);
                     counts.push(degrees);
+
+                    // Calculate velocity
+                    let currentVelocity = 0;
+                    if (timestamps.length > 1) {
+                        const deltaTime = timestamps[timestamps.length - 1] - timestamps[timestamps.length - 2];
+                        const deltaPosition = counts[counts.length - 1] - counts[counts.length - 2];
+                        currentVelocity = deltaPosition / deltaTime;
+                        velocities.push(currentVelocity);
+                    } else {
+                        velocities.push(0);
+                    }
+
+                    // Calculate acceleration
+                    if (velocities.length > 1) {
+                        const deltaTime = timestamps[timestamps.length - 1] - timestamps[timestamps.length - 2];
+                        const deltaVelocity = velocities[velocities.length - 1] - velocities[velocities.length - 2];
+                        const acceleration = deltaVelocity / deltaTime;
+                        accelerations.push(acceleration);
+                    } else {
+                        accelerations.push(0);
+                    }
 
                     // Keep only last maxPoints
                     if (timestamps.length > maxPoints) {
                         timestamps = timestamps.slice(-maxPoints);
                         counts = counts.slice(-maxPoints);
+                        velocities = velocities.slice(-maxPoints);
+                        accelerations = accelerations.slice(-maxPoints);
                     }
 
-                    // Update the plot
+                    // Update all plots
                     Plotly.update('chart', {
                         x: [timestamps],
                         y: [counts]
                     }).catch(error => {
-                        console.error('Error updating plot:', error);
+                        console.error('Error updating position plot:', error);
+                    });
+
+                    Plotly.update('velocity-chart', {
+                        x: [timestamps],
+                        y: [velocities]
+                    }).catch(error => {
+                        console.error('Error updating velocity plot:', error);
+                    });
+
+                    Plotly.update('acceleration-chart', {
+                        x: [timestamps],
+                        y: [accelerations]
+                    }).catch(error => {
+                        console.error('Error updating acceleration plot:', error);
                     });
                 } else {
                     console.log('Unhandled message:', message);
