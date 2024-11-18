@@ -309,6 +309,8 @@ class ClockWatcher {
         this.lastPositivePeak = null;
         this.lastNegativePeak = null;
         document.getElementById('current-amplitude').textContent = '0°';
+        document.getElementById('positive-peak').textContent = '+0°';
+        document.getElementById('negative-peak').textContent = '-0°';
         
         // Force plot update
         this.updatePlots();
@@ -331,11 +333,15 @@ class ClockWatcher {
             this.lastNegativePeak = current;
         }
 
-        // Calculate and display amplitude if we have both peaks
+        // Update displays if we have both peaks
         if (this.lastPositivePeak !== null && this.lastNegativePeak !== null) {
             const amplitude = this.lastPositivePeak - this.lastNegativePeak;
             document.getElementById('current-amplitude').textContent = 
                 `${Math.abs(amplitude).toFixed(0)}°`;
+            document.getElementById('positive-peak').textContent = 
+                `+${this.lastPositivePeak.toFixed(0)}°`;
+            document.getElementById('negative-peak').textContent = 
+                `${this.lastNegativePeak.toFixed(0)}°`;
         }
     }
 }

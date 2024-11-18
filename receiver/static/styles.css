@@ -174,3 +174,14 @@ h1 {
     gap: 2rem;
     margin-bottom: 2rem;
 }
+
+.peak-values {
+    font-size: 14px;
+    color: #666;
+    margin-top: 5px;
+}
+
+.peak-values span {
+    margin: 0 5px;
+    font-size: 14px;
+}
