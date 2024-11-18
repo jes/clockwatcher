@@ -64,8 +64,8 @@
 
         const layout = {
             title: 'Encoder Position',
-            xaxis: { title: 'Time (ms)' },
-            yaxis: { title: 'Position' }
+            xaxis: { title: 'Time (s)' },
+            yaxis: { title: 'Position (degrees)' }
         };
 
         Plotly.newPlot('chart', [trace], layout);
@@ -141,9 +141,10 @@
                 const message = JSON.parse(event.data);
                 
                 if (message.Timestamp !== undefined) {
-                    const timeMs = message.TotalMicros / 1000;  // Convert to milliseconds
-                    timestamps.push(timeMs);
-                    counts.push(message.Count);
+                    const timeSeconds = message.TotalMicros / 1000000;  // Convert to seconds
+                    const degrees = message.Count * 4;  // Convert position to degrees
+                    timestamps.push(timeSeconds);
+                    counts.push(degrees);
 
                     // Keep only last maxPoints
                     if (timestamps.length > maxPoints) {
