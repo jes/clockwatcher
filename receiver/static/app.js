@@ -12,6 +12,8 @@ class ClockWatcher {
         this.wsConnectionAttempts = 0;
         this.maxReconnectAttempts = 5;
         this.smoothingWindow = 20; // Number of points to use for moving average
+        this.lastPositivePeak = null;
+        this.lastNegativePeak = null;
         
         // DOM elements
         this.serialStatus = document.getElementById('serial-status');
@@ -23,6 +25,9 @@ class ClockWatcher {
         
         // Initialize position display
         document.getElementById('current-position').textContent = '0°';
+        
+        // Initialize amplitude display
+        document.getElementById('current-amplitude').textContent = '0°';
         
         this.initializePlots();
         this.setupEventListeners();
@@ -95,6 +100,9 @@ class ClockWatcher {
 
         this.timestamps.push(timeSeconds);
         this.counts.push(degrees || 0);
+        
+        // Add peak detection after adding new reading
+        this.detectPeaks();
 
         // Calculate velocity
         const currentVelocity = this.calculateVelocity();
@@ -297,8 +305,38 @@ class ClockWatcher {
         document.getElementById('current-position').textContent = 
             `${(this.counts[this.counts.length - 1] || 0).toFixed(0)}°`;
             
+        // Reset peak detection when taring
+        this.lastPositivePeak = null;
+        this.lastNegativePeak = null;
+        document.getElementById('current-amplitude').textContent = '0°';
+        
         // Force plot update
         this.updatePlots();
+    }
+
+    detectPeaks() {
+        const n = this.counts.length;
+        if (n < 3) return;  // Need at least 3 points to detect a peak
+
+        const current = this.counts[n - 2];  // Look at second-to-last point
+        const prev = this.counts[n - 3];
+        const next = this.counts[n - 1];
+
+        // Detect positive peak
+        if (current > prev && current > next) {
+            this.lastPositivePeak = current;
+        }
+        // Detect negative peak
+        else if (current < prev && current < next) {
+            this.lastNegativePeak = current;
+        }
+
+        // Calculate and display amplitude if we have both peaks
+        if (this.lastPositivePeak !== null && this.lastNegativePeak !== null) {
+            const amplitude = this.lastPositivePeak - this.lastNegativePeak;
+            document.getElementById('current-amplitude').textContent = 
+                `${Math.abs(amplitude).toFixed(0)}°`;
+        }
     }
 }
 
