@@ -88,6 +88,55 @@
         .status-ok { background-color: #2ecc71; }
         .status-error { background-color: #e74c3c; }
         .status-info { background-color: #3498db; }
+
+        .value-card {
+            background-color: #fff;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        .value-card label {
+            font-weight: 500;
+        }
+
+        .value-card span {
+            margin-left: 10px;
+        }
+
+        #instant-values {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+            padding: 15px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .value-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 20px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            min-width: 150px;
+        }
+
+        .value-card label {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .value-card span {
+            font-size: 24px;
+            font-weight: 500;
+            color: #2c3e50;
+        }
     </style>
 </head>
 <body>
@@ -101,6 +150,13 @@
             <select id="serial-ports"></select>
             <button id="connect-btn">Connect</button>
             <button id="scan-btn">Rescan</button>
+        </div>
+    </div>
+
+    <div id="instant-values">
+        <div class="value-card">
+            <label>Position</label>
+            <span id="current-position">0°</span>
         </div>
     </div>
 
@@ -261,9 +317,14 @@
                     // Handle status messages
                     updateStatus(message);
                 } else if (message.Timestamp !== undefined) {
-                    // Handle encoder readings (existing code)
+                    // Handle encoder readings
                     const timeSeconds = message.TotalMicros / 1000000;
                     const degrees = message.Count * 4;
+                    
+                    // Update instantaneous value display
+                    document.getElementById('current-position').textContent = 
+                        `${degrees.toFixed(0)}°`;
+
                     timestamps.push(timeSeconds);
                     counts.push(degrees);
 
