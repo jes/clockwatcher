@@ -18,12 +18,14 @@ type Server struct {
 }
 
 func NewServer() *Server {
-	ws := NewWebSocketServer()
-	return &Server{
-		wsServer:   ws,
+	s := &Server{
 		readings:   make(chan Reading),
 		statusChan: make(chan StatusMessage),
 	}
+	ws := NewWebSocketServer()
+	ws.server = s
+	s.wsServer = ws
+	return s
 }
 
 func (s *Server) Start() {
@@ -97,8 +99,23 @@ func (s *Server) handleConnectSerialPort(w http.ResponseWriter, r *http.Request)
 	serialReader := NewSerialReader(port, s.statusChan)
 	go serialReader.StartReading(s.readings)
 
-	s.statusChan <- StatusMessage{Status: "Serial Connected", Error: req.PortName}
 	w.WriteHeader(http.StatusOK)
+}
+
+func (s *Server) getCurrentSerialStatus() StatusMessage {
+	s.serialMux.Lock()
+	defer s.serialMux.Unlock()
+
+	if s.serialPort == nil {
+		return StatusMessage{
+			Device: DeviceTypeSerial,
+			Status: StatusDisconnected,
+		}
+	}
+	return StatusMessage{
+		Device: DeviceTypeSerial,
+		Status: StatusConnected,
+	}
 }
 
 func main() {

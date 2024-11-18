@@ -14,6 +14,7 @@ type WebSocketServer struct {
 	broadcast  chan interface{}
 	upgrader   websocket.Upgrader
 	clientsMux sync.Mutex
+	server     *Server
 }
 
 func NewWebSocketServer() *WebSocketServer {
@@ -59,6 +60,15 @@ func (s *WebSocketServer) handleConnections(w http.ResponseWriter, r *http.Reque
 	s.clients[ws] = true
 	s.clientsMux.Unlock()
 
+	// Send initial serial status
+	if s.server != nil {
+		status := s.server.getCurrentSerialStatus()
+		message, err := json.Marshal(status)
+		if err == nil {
+			ws.WriteMessage(websocket.TextMessage, message)
+		}
+	}
+
 	log.Println("New WebSocket client connected")
 	defer func() {
 		s.clientsMux.Lock()
@@ -68,7 +78,6 @@ func (s *WebSocketServer) handleConnections(w http.ResponseWriter, r *http.Reque
 	}()
 
 	for {
-		// Keep the connection alive by reading messages (if needed)
 		_, _, err := ws.ReadMessage()
 		if err != nil {
 			break

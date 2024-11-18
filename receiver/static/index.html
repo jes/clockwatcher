@@ -237,8 +237,13 @@
         ws.onmessage = function(event) {
             try {
                 const message = JSON.parse(event.data);
+                console.log(message);
                 
-                if (message.Timestamp !== undefined) {
+                if (message.Status !== undefined) {
+                    // Handle status messages
+                    updateStatus(message);
+                } else if (message.Timestamp !== undefined) {
+                    // Handle encoder readings (existing code)
                     const timeSeconds = message.TotalMicros / 1000000;
                     const degrees = message.Count * 4;
                     timestamps.push(timeSeconds);
@@ -315,19 +320,24 @@
         };
 
         function updateStatus(message) {
-            if (message.Status.startsWith("Serial")) {
-                if (message.Status === "No serial device connected") {
-                    serialStatus.textContent = 'Serial: Not Connected';
-                    serialStatus.className = 'status-error';
-                } else if (message.Status === "Serial Reader Started") {
-                    serialStatus.textContent = 'Serial: Connected';
-                    serialStatus.className = 'status-ok';
-                } else if (message.Status === "Overflow") {
-                    serialStatus.textContent = `Serial: Overflow (${message.Error})`;
-                    serialStatus.className = 'status-info';
-                } else if (message.Status === "Serial Error") {
-                    serialStatus.textContent = `Serial: Error (${message.Error})`;
-                    serialStatus.className = 'status-error';
+            if (message.Device === "SERIAL") {
+                switch (message.Status) {
+                    case "DISCONNECTED":
+                        serialStatus.textContent = 'Serial: Not Connected';
+                        serialStatus.className = 'status-error';
+                        break;
+                    case "CONNECTED":
+                        serialStatus.textContent = 'Serial: Connected';
+                        serialStatus.className = 'status-ok';
+                        break;
+                    case "OVERFLOW":
+                        serialStatus.textContent = `Serial: Overflow (${message.Error})`;
+                        serialStatus.className = 'status-info';
+                        break;
+                    case "ERROR":
+                        serialStatus.textContent = `Serial: Error (${message.Error})`;
+                        serialStatus.className = 'status-error';
+                        break;
                 }
             }
         }
