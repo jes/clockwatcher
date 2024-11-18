@@ -6,6 +6,7 @@ class ClockWatcher {
         this.velocities = [];
         this.accelerations = [];
         this.ws = null;
+        this.tareOffset = 0;
         
         // DOM elements
         this.serialStatus = document.getElementById('serial-status');
@@ -13,6 +14,7 @@ class ClockWatcher {
         this.serialPortsSelect = document.getElementById('serial-ports');
         this.connectBtn = document.getElementById('connect-btn');
         this.scanBtn = document.getElementById('scan-btn');
+        this.tareBtn = document.getElementById('tare-btn');
         
         // Initialize position display
         document.getElementById('current-position').textContent = '0°';
@@ -28,6 +30,7 @@ class ClockWatcher {
     setupEventListeners() {
         this.connectBtn.addEventListener('click', () => this.handleConnect());
         this.scanBtn.addEventListener('click', () => this.fetchSerialPorts());
+        this.tareBtn.addEventListener('click', () => this.handleTare());
     }
 
     initializePlots() {
@@ -79,7 +82,7 @@ class ClockWatcher {
 
     addReading(message) {
         const timeSeconds = message.TotalMicros / 1000000;
-        const degrees = message.Count * 4;
+        const degrees = (message.Count * 2) - this.tareOffset;
         
         // Update instantaneous value display
         document.getElementById('current-position').textContent = 
@@ -247,6 +250,22 @@ class ClockWatcher {
                 console.error('Error processing message:', error);
             }
         };
+    }
+
+    handleTare() {
+        // Get the last position value
+        const currentPosition = this.counts[this.counts.length - 1] || 0;
+        this.tareOffset += currentPosition;
+        
+        // Update existing data points
+        this.counts = this.counts.map(count => count - currentPosition);
+        
+        // Update the display
+        document.getElementById('current-position').textContent = 
+            `${(this.counts[this.counts.length - 1] || 0).toFixed(0)}°`;
+            
+        // Force plot update
+        this.updatePlots();
     }
 }
 
