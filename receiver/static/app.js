@@ -100,50 +100,39 @@ class ClockWatcher {
         this.trimArrays();
     }
 
-    calculateVelocity() {
-        const numPoints = 5; // Number of points to average over
-        if (this.timestamps.length < numPoints) return 0;
-        
-        // Get the last n points
-        const recentTimes = this.timestamps.slice(-numPoints);
-        const recentPositions = this.counts.slice(-numPoints);
-        
-        // Calculate velocity using linear regression
+    calculateLinearRegression(xValues, yValues) {
+        const n = xValues.length;
         let sumXY = 0, sumX = 0, sumY = 0, sumX2 = 0;
-        const n = recentTimes.length;
         
         for (let i = 0; i < n; i++) {
-            sumXY += recentTimes[i] * recentPositions[i];
-            sumX += recentTimes[i];
-            sumY += recentPositions[i];
-            sumX2 += recentTimes[i] * recentTimes[i];
+            sumXY += xValues[i] * yValues[i];
+            sumX += xValues[i];
+            sumY += yValues[i];
+            sumX2 += xValues[i] * xValues[i];
         }
         
-        // Slope of the regression line = velocity
+        // Return slope of the regression line
         return (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
     }
 
+    calculateVelocity() {
+        const numPoints = 10; // Increased number of points
+        if (this.timestamps.length < numPoints) return 0;
+        
+        const recentTimes = this.timestamps.slice(-numPoints);
+        const recentPositions = this.counts.slice(-numPoints);
+        
+        return this.calculateLinearRegression(recentTimes, recentPositions);
+    }
+
     calculateAcceleration() {
-        const numPoints = 5; // Number of points to average over
+        const numPoints = 10; // Increased number of points
         if (this.velocities.length < numPoints) return 0;
         
-        // Get the last n points
         const recentTimes = this.timestamps.slice(-numPoints);
         const recentVelocities = this.velocities.slice(-numPoints);
         
-        // Calculate acceleration using linear regression
-        let sumXY = 0, sumX = 0, sumY = 0, sumX2 = 0;
-        const n = recentTimes.length;
-        
-        for (let i = 0; i < n; i++) {
-            sumXY += recentTimes[i] * recentVelocities[i];
-            sumX += recentTimes[i];
-            sumY += recentVelocities[i];
-            sumX2 += recentTimes[i] * recentTimes[i];
-        }
-        
-        // Slope of the regression line = acceleration
-        return (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+        return this.calculateLinearRegression(recentTimes, recentVelocities);
     }
 
     trimArrays() {
