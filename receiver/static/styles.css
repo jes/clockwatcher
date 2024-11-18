@@ -26,7 +26,7 @@ h1 {
     grid-column: 1 / -1;  /* Makes the first chart full width */
 }
 
-#chart, #velocity-chart, #acceleration-chart {
+#chart, #velocity-chart, #acceleration-chart, #period-chart, #amplitude-chart {
     width: 100%;
     height: 300px;
     background: white;

@@ -38,6 +38,12 @@ class ClockWatcher {
         document.getElementById('positive-period').textContent = '+0.0s';
         document.getElementById('negative-period').textContent = '-0.0s';
         
+        // Add new arrays for period and amplitude data
+        this.periodData = [];
+        this.amplitudeData = [];
+        this.periodTimestamps = [];
+        this.amplitudeTimestamps = [];
+        
         this.initializePlots();
         this.setupEventListeners();
         this.connectWebSocket();
@@ -73,6 +79,16 @@ class ClockWatcher {
                 title: 'Balance wheel acceleration',
                 xaxis: { title: 'Time (s)' },
                 yaxis: { title: 'Acceleration (degrees/s²)' }
+            },
+            period: {
+                title: 'Period',
+                xaxis: { title: 'Time (s)' },
+                yaxis: { title: 'Period (s)' }
+            },
+            amplitude: {
+                title: 'Amplitude',
+                xaxis: { title: 'Time (s)' },
+                yaxis: { title: 'Amplitude (degrees)' }
             }
         };
 
@@ -97,6 +113,21 @@ class ClockWatcher {
             mode: 'lines',
             name: 'Acceleration'
         }], layouts.acceleration);
+
+        // Initialize period and amplitude plots
+        Plotly.newPlot('period-chart', [{
+            x: this.periodTimestamps,
+            y: this.periodData,
+            mode: 'lines',
+            name: 'Period'
+        }], layouts.period);
+
+        Plotly.newPlot('amplitude-chart', [{
+            x: this.amplitudeTimestamps,
+            y: this.amplitudeData,
+            mode: 'lines',
+            name: 'Amplitude'
+        }], layouts.amplitude);
     }
 
     addReading(message) {
@@ -157,20 +188,21 @@ class ClockWatcher {
     }
 
     updatePlots() {
-        // Apply smoothing to velocity and acceleration data
         const smoothedVelocities = this.movingAverage(this.velocities, this.smoothingWindow);
         const smoothedAccelerations = this.movingAverage(this.accelerations, this.smoothingWindow);
 
         const updates = [
             { id: 'chart', data: this.counts },
             { id: 'velocity-chart', data: smoothedVelocities },
-            { id: 'acceleration-chart', data: smoothedAccelerations }
+            { id: 'acceleration-chart', data: smoothedAccelerations },
+            { id: 'period-chart', x: this.periodTimestamps, y: this.periodData },
+            { id: 'amplitude-chart', x: this.amplitudeTimestamps, y: this.amplitudeData }
         ];
 
-        updates.forEach(({ id, data }) => {
+        updates.forEach(({ id, data, x, y }) => {
             Plotly.update(id, {
-                x: [this.timestamps],
-                y: [data]
+                x: [x || this.timestamps],
+                y: [y || data]
             }).catch(error => {
                 console.error(`Error updating ${id}:`, error);
             });
@@ -365,25 +397,41 @@ class ClockWatcher {
             }
         }
 
-        // Existing peak detection code
+        // Detect peaks and update amplitude
         if (n < 3) return;
         const middlePoint = this.counts[n - 2];
         const prevPoint = this.counts[n - 3];
 
+        let amplitudeUpdated = false;  // Flag to track if amplitude was updated
+
         // Detect positive peak
         if (middlePoint > prevPoint && middlePoint > this.counts[n - 1]) {
             this.lastPositivePeak = middlePoint;
+            amplitudeUpdated = true;
         }
         // Detect negative peak
         else if (middlePoint < prevPoint && middlePoint < this.counts[n - 1]) {
             this.lastNegativePeak = middlePoint;
+            amplitudeUpdated = true;
         }
 
-        // Update displays if we have both peaks
-        if (this.lastPositivePeak !== null && this.lastNegativePeak !== null) {
-            const amplitude = this.lastPositivePeak - this.lastNegativePeak;
+        // Update amplitude plot only when we have both peaks AND a new peak was detected
+        if (this.lastPositivePeak !== null && this.lastNegativePeak !== null && amplitudeUpdated) {
+            const amplitude = Math.abs(this.lastPositivePeak - this.lastNegativePeak);
+            
+            // Add amplitude data point
+            this.amplitudeData.push(amplitude);
+            this.amplitudeTimestamps.push(this.timestamps[this.timestamps.length - 1]);
+            
+            // Trim amplitude data if too long
+            if (this.amplitudeData.length > this.maxPoints) {
+                this.amplitudeData = this.amplitudeData.slice(-this.maxPoints);
+                this.amplitudeTimestamps = this.amplitudeTimestamps.slice(-this.maxPoints);
+            }
+            
+            // Update displays
             document.getElementById('current-amplitude').textContent = 
-                `${Math.abs(amplitude).toFixed(0)}°`;
+                `${amplitude.toFixed(0)}°`;
             document.getElementById('positive-peak').textContent = 
                 `+${this.lastPositivePeak.toFixed(0)}°`;
             document.getElementById('negative-peak').textContent = 
@@ -393,15 +441,22 @@ class ClockWatcher {
 
     updateTotalPeriod() {
         if (this.lastPositiveZeroCrossing && this.lastNegativeZeroCrossing) {
-            // Get the most recent half-periods from the display elements
             const positivePeriod = parseFloat(document.getElementById('positive-period').textContent) || 0;
             const negativePeriod = Math.abs(parseFloat(document.getElementById('negative-period').textContent)) || 0;
-            
-            // Total period is the sum of both half-periods
             const totalPeriod = positivePeriod + negativePeriod;
             
             document.getElementById('current-period').textContent = 
                 `${totalPeriod.toFixed(3)}s`;
+            
+            // Add period data point
+            this.periodData.push(totalPeriod);
+            this.periodTimestamps.push(this.timestamps[this.timestamps.length - 1]);
+            
+            // Trim period data if too long
+            if (this.periodData.length > this.maxPoints) {
+                this.periodData = this.periodData.slice(-this.maxPoints);
+                this.periodTimestamps = this.periodTimestamps.slice(-this.maxPoints);
+            }
         }
     }
 }
