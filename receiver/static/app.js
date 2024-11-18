@@ -15,8 +15,6 @@ class ClockWatcher {
         this.lastPositivePeak = null;
         this.lastNegativePeak = null;
         this.lastZeroCrossing = null;
-        this.lastPositiveZeroCrossing = null;
-        this.lastNegativeZeroCrossing = null;
         this.previousCount = null;
         
         // DOM elements
@@ -36,8 +34,8 @@ class ClockWatcher {
         
         // Initialize period displays
         document.getElementById('current-period').textContent = '0.0s';
-        document.getElementById('positive-period').textContent = '+0.0s';
-        document.getElementById('negative-period').textContent = '-0.0s';
+        document.getElementById('positive-period').textContent = '0.0s';
+        document.getElementById('negative-period').textContent = '0.0s';
         
         // Add new arrays for period and amplitude data
         this.periodData = [];
@@ -350,11 +348,9 @@ class ClockWatcher {
             
         // Reset period measurements when taring
         this.lastZeroCrossing = null;
-        this.lastPositiveZeroCrossing = null;
-        this.lastNegativeZeroCrossing = null;
         document.getElementById('current-period').textContent = '0.0s';
-        document.getElementById('positive-period').textContent = '+0.0s';
-        document.getElementById('negative-period').textContent = '-0.0s';
+        document.getElementById('positive-period').textContent = '0.0s';
+        document.getElementById('negative-period').textContent = '0.0s';
         
         // Reset peak detection when taring
         this.lastPositivePeak = null;
@@ -382,15 +378,13 @@ class ClockWatcher {
         this.lastPositivePeak = null;
         this.lastNegativePeak = null;
         this.lastZeroCrossing = null;
-        this.lastPositiveZeroCrossing = null;
-        this.lastNegativeZeroCrossing = null;
         
         // Reset displays
         document.getElementById('current-position').textContent = '0°';
         document.getElementById('current-amplitude').textContent = '0°';
         document.getElementById('current-period').textContent = '0.0s';
-        document.getElementById('positive-period').textContent = '+0.0s';
-        document.getElementById('negative-period').textContent = '-0.0s';
+        document.getElementById('positive-period').textContent = '0.0s';
+        document.getElementById('negative-period').textContent = '0.0s';
         document.getElementById('positive-peak').textContent = '+0°';
         document.getElementById('negative-peak').textContent = '-0°';
         
@@ -410,22 +404,22 @@ class ClockWatcher {
         if (prev !== null && current !== null) {
             // Positive-going zero crossing
             if (prev <= 0 && current > 0) {
-                if (this.lastPositiveZeroCrossing !== null) {
-                    const positivePeriod = currentTime - this.lastPositiveZeroCrossing;
+                if (this.lastZeroCrossing !== null) {
+                    const positivePeriod = currentTime - this.lastZeroCrossing;
                     document.getElementById('positive-period').textContent = 
-                        `+${positivePeriod.toFixed(3)}s`;
+                        `${positivePeriod.toFixed(3)}s`;
                 }
-                this.lastPositiveZeroCrossing = currentTime;
+                this.lastZeroCrossing = currentTime;
                 this.updateTotalPeriod();
             }
             // Negative-going zero crossing
             else if (prev >= 0 && current < 0) {
-                if (this.lastNegativeZeroCrossing !== null) {
-                    const negativePeriod = currentTime - this.lastNegativeZeroCrossing;
+                if (this.lastZeroCrossing !== null) {
+                    const negativePeriod = currentTime - this.lastZeroCrossing;
                     document.getElementById('negative-period').textContent = 
-                        `-${negativePeriod.toFixed(3)}s`;
+                        `${negativePeriod.toFixed(3)}s`;
                 }
-                this.lastNegativeZeroCrossing = currentTime;
+                this.lastZeroCrossing = currentTime;
                 this.updateTotalPeriod();
             }
         }
@@ -473,16 +467,16 @@ class ClockWatcher {
     }
 
     updateTotalPeriod() {
-        if (this.lastPositiveZeroCrossing && this.lastNegativeZeroCrossing) {
+        if (this.lastZeroCrossing) {
             const positivePeriod = parseFloat(document.getElementById('positive-period').textContent) || 0;
-            const negativePeriod = Math.abs(parseFloat(document.getElementById('negative-period').textContent)) || 0;
+            const negativePeriod = parseFloat(document.getElementById('negative-period').textContent) || 0;
             const totalPeriod = positivePeriod + negativePeriod;
+
+            // Only add period data if both halves are nonzero
+            if (negativePeriod > 0 && positivePeriod > 0) {
+                document.getElementById('current-period').textContent = 
+                    `${totalPeriod.toFixed(3)}s`;
             
-            document.getElementById('current-period').textContent = 
-                `${totalPeriod.toFixed(3)}s`;
-            
-            // Only add period data if it's non-zero
-            if (totalPeriod > 0) {
                 // Add period data point
                 this.periodData.push(totalPeriod);
                 this.periodTimestamps.push(this.timestamps[this.timestamps.length - 1]);
