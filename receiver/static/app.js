@@ -14,6 +14,10 @@ class ClockWatcher {
         this.smoothingWindow = 20; // Number of points to use for moving average
         this.lastPositivePeak = null;
         this.lastNegativePeak = null;
+        this.lastZeroCrossing = null;
+        this.lastPositiveZeroCrossing = null;
+        this.lastNegativeZeroCrossing = null;
+        this.previousCount = null;
         
         // DOM elements
         this.serialStatus = document.getElementById('serial-status');
@@ -28,6 +32,11 @@ class ClockWatcher {
         
         // Initialize amplitude display
         document.getElementById('current-amplitude').textContent = '0°';
+        
+        // Initialize period displays
+        document.getElementById('current-period').textContent = '0.0s';
+        document.getElementById('positive-period').textContent = '+0.0s';
+        document.getElementById('negative-period').textContent = '-0.0s';
         
         this.initializePlots();
         this.setupEventListeners();
@@ -101,8 +110,8 @@ class ClockWatcher {
         this.timestamps.push(timeSeconds);
         this.counts.push(degrees || 0);
         
-        // Add peak detection after adding new reading
-        this.detectPeaks();
+        // Replace detectPeaks with detectCrossingsAndPeaks
+        this.detectCrossingsAndPeaks();
 
         // Calculate velocity
         const currentVelocity = this.calculateVelocity();
@@ -305,6 +314,14 @@ class ClockWatcher {
         document.getElementById('current-position').textContent = 
             `${(this.counts[this.counts.length - 1] || 0).toFixed(0)}°`;
             
+        // Reset period measurements when taring
+        this.lastZeroCrossing = null;
+        this.lastPositiveZeroCrossing = null;
+        this.lastNegativeZeroCrossing = null;
+        document.getElementById('current-period').textContent = '0.0s';
+        document.getElementById('positive-period').textContent = '+0.0s';
+        document.getElementById('negative-period').textContent = '-0.0s';
+        
         // Reset peak detection when taring
         this.lastPositivePeak = null;
         this.lastNegativePeak = null;
@@ -316,21 +333,50 @@ class ClockWatcher {
         this.updatePlots();
     }
 
-    detectPeaks() {
+    detectCrossingsAndPeaks() {
         const n = this.counts.length;
-        if (n < 3) return;  // Need at least 3 points to detect a peak
+        if (n < 2) return;  // Need at least 2 points for zero crossing
 
-        const current = this.counts[n - 2];  // Look at second-to-last point
-        const prev = this.counts[n - 3];
-        const next = this.counts[n - 1];
+        const current = this.counts[n - 1];
+        const prev = this.counts[n - 2];
+        const currentTime = this.timestamps[n - 1];
+
+        // Zero crossing detection
+        if (prev !== null && current !== null) {
+            // Positive-going zero crossing
+            if (prev <= 0 && current > 0) {
+                if (this.lastPositiveZeroCrossing !== null) {
+                    const positivePeriod = currentTime - this.lastPositiveZeroCrossing;
+                    document.getElementById('positive-period').textContent = 
+                        `+${positivePeriod.toFixed(3)}s`;
+                }
+                this.lastPositiveZeroCrossing = currentTime;
+                this.updateTotalPeriod();
+            }
+            // Negative-going zero crossing
+            else if (prev >= 0 && current < 0) {
+                if (this.lastNegativeZeroCrossing !== null) {
+                    const negativePeriod = currentTime - this.lastNegativeZeroCrossing;
+                    document.getElementById('negative-period').textContent = 
+                        `-${negativePeriod.toFixed(3)}s`;
+                }
+                this.lastNegativeZeroCrossing = currentTime;
+                this.updateTotalPeriod();
+            }
+        }
+
+        // Existing peak detection code
+        if (n < 3) return;
+        const middlePoint = this.counts[n - 2];
+        const prevPoint = this.counts[n - 3];
 
         // Detect positive peak
-        if (current > prev && current > next) {
-            this.lastPositivePeak = current;
+        if (middlePoint > prevPoint && middlePoint > this.counts[n - 1]) {
+            this.lastPositivePeak = middlePoint;
         }
         // Detect negative peak
-        else if (current < prev && current < next) {
-            this.lastNegativePeak = current;
+        else if (middlePoint < prevPoint && middlePoint < this.counts[n - 1]) {
+            this.lastNegativePeak = middlePoint;
         }
 
         // Update displays if we have both peaks
@@ -342,6 +388,20 @@ class ClockWatcher {
                 `+${this.lastPositivePeak.toFixed(0)}°`;
             document.getElementById('negative-peak').textContent = 
                 `${this.lastNegativePeak.toFixed(0)}°`;
+        }
+    }
+
+    updateTotalPeriod() {
+        if (this.lastPositiveZeroCrossing && this.lastNegativeZeroCrossing) {
+            // Get the most recent half-periods from the display elements
+            const positivePeriod = parseFloat(document.getElementById('positive-period').textContent) || 0;
+            const negativePeriod = Math.abs(parseFloat(document.getElementById('negative-period').textContent)) || 0;
+            
+            // Total period is the sum of both half-periods
+            const totalPeriod = positivePeriod + negativePeriod;
+            
+            document.getElementById('current-period').textContent = 
+                `${totalPeriod.toFixed(3)}s`;
         }
     }
 }
