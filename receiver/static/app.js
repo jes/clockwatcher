@@ -26,6 +26,7 @@ class ClockWatcher {
         this.connectBtn = document.getElementById('connect-btn');
         this.scanBtn = document.getElementById('scan-btn');
         this.tareBtn = document.getElementById('tare-btn');
+        this.resetBtn = document.getElementById('reset-btn');
         
         // Initialize position display
         document.getElementById('current-position').textContent = '0°';
@@ -56,6 +57,7 @@ class ClockWatcher {
         this.connectBtn.addEventListener('click', () => this.handleConnect());
         this.scanBtn.addEventListener('click', () => this.fetchSerialPorts());
         this.tareBtn.addEventListener('click', () => this.handleTare());
+        this.resetBtn.addEventListener('click', () => this.handleReset());
     }
 
     initializePlots() {
@@ -365,6 +367,37 @@ class ClockWatcher {
         this.updatePlots();
     }
 
+    handleReset() {
+        // Clear all data arrays
+        this.timestamps = [];
+        this.counts = [];
+        this.velocities = [];
+        this.accelerations = [];
+        this.periodData = [];
+        this.amplitudeData = [];
+        this.periodTimestamps = [];
+        this.amplitudeTimestamps = [];
+        
+        // Reset peak and crossing detection
+        this.lastPositivePeak = null;
+        this.lastNegativePeak = null;
+        this.lastZeroCrossing = null;
+        this.lastPositiveZeroCrossing = null;
+        this.lastNegativeZeroCrossing = null;
+        
+        // Reset displays
+        document.getElementById('current-position').textContent = '0°';
+        document.getElementById('current-amplitude').textContent = '0°';
+        document.getElementById('current-period').textContent = '0.0s';
+        document.getElementById('positive-period').textContent = '+0.0s';
+        document.getElementById('negative-period').textContent = '-0.0s';
+        document.getElementById('positive-peak').textContent = '+0°';
+        document.getElementById('negative-peak').textContent = '-0°';
+        
+        // Force plot update
+        this.updatePlots();
+    }
+
     detectCrossingsAndPeaks() {
         const n = this.counts.length;
         if (n < 2) return;  // Need at least 2 points for zero crossing
@@ -448,14 +481,17 @@ class ClockWatcher {
             document.getElementById('current-period').textContent = 
                 `${totalPeriod.toFixed(3)}s`;
             
-            // Add period data point
-            this.periodData.push(totalPeriod);
-            this.periodTimestamps.push(this.timestamps[this.timestamps.length - 1]);
-            
-            // Trim period data if too long
-            if (this.periodData.length > this.maxPoints) {
-                this.periodData = this.periodData.slice(-this.maxPoints);
-                this.periodTimestamps = this.periodTimestamps.slice(-this.maxPoints);
+            // Only add period data if it's non-zero
+            if (totalPeriod > 0) {
+                // Add period data point
+                this.periodData.push(totalPeriod);
+                this.periodTimestamps.push(this.timestamps[this.timestamps.length - 1]);
+                
+                // Trim period data if too long
+                if (this.periodData.length > this.maxPoints) {
+                    this.periodData = this.periodData.slice(-this.maxPoints);
+                    this.periodTimestamps = this.periodTimestamps.slice(-this.maxPoints);
+                }
             }
         }
     }

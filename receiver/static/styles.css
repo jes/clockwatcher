@@ -73,6 +73,7 @@ h1 {
     border-radius: 3px;
     cursor: pointer;
     font-weight: 500;
+    margin-right: 8px;
 }
 
 .device-controls button:hover {
@@ -184,4 +185,12 @@ h1 {
 .peak-values span {
     margin: 0 5px;
     font-size: 14px;
+}
+
+#reset-btn {
+    background-color: #e74c3c;
+}
+
+#reset-btn:hover {
+    background-color: #c0392b;
 }
