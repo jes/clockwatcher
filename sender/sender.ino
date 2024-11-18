@@ -5,12 +5,21 @@ const uint8_t pinA = D5;
 const uint8_t pinB = D8;
 
 // Global variables for ISR communication
-volatile uint32_t lastTimestamp = 0;    // Last observed timestamp
-volatile uint8_t lastDirection = 0;     // Last observed direction
 volatile uint8_t collisionCount = 0;    // Tracks missed readings
 volatile bool newData = false;          // Flag for new data available
 
 volatile uint8_t lastState = 0;
+
+// Define buffer structure
+const uint16_t BUFFER_SIZE = 100;
+struct Reading {
+    uint32_t timestamp;
+    uint8_t direction;
+};
+volatile Reading buffer[BUFFER_SIZE];
+volatile uint16_t writeIndex = 0;
+volatile uint16_t readIndex = 0;
+volatile bool bufferFull = false;
 
 void IRAM_ATTR handleEncoder() {
     uint8_t stateA = digitalRead(pinA);
@@ -45,14 +54,17 @@ void IRAM_ATTR handleEncoder() {
     
     lastState = currentState;
     
-    // Instead of buffer, update globals
-    if (newData) {
-        // Previous data wasn't processed yet
+    // Update buffer instead of single variables
+    uint16_t nextIndex = (writeIndex + 1) % BUFFER_SIZE;
+    if (nextIndex == readIndex) {
+        // Buffer is full
         collisionCount++;
+        return;
     }
     
-    lastTimestamp = micros();
-    lastDirection = direction;
+    buffer[writeIndex].timestamp = micros();
+    buffer[writeIndex].direction = direction;
+    writeIndex = nextIndex;
     newData = true;
 }
 
@@ -74,10 +86,10 @@ void loop() {
                 Serial.write(0xFF);
             }
             collisionCount--;
-        } else {
+        } else if (readIndex != writeIndex) {  // Check if there's data to read
             // Normal data transmission
-            uint32_t timestamp = lastTimestamp;
-            uint8_t dir = lastDirection;
+            uint32_t timestamp = buffer[readIndex].timestamp;
+            uint8_t dir = buffer[readIndex].direction;
             
             // Calculate checksum byte by byte
             uint8_t checksum = 0;
@@ -99,7 +111,12 @@ void loop() {
                 Serial.write(bytes[i]);
             }
             Serial.write(finalByte);
+            
+            readIndex = (readIndex + 1) % BUFFER_SIZE;
         }
-        newData = false;
+        
+        if (readIndex == writeIndex) {
+            newData = false;  // Buffer is empty
+        }
     }
 }

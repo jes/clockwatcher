@@ -7,6 +7,11 @@ class ClockWatcher {
         this.accelerations = [];
         this.ws = null;
         this.tareOffset = 0;
+        this.wsConnectionTimeout = 5000; // 5 second timeout
+        this.wsReconnectDelay = 1000;   // 1 second delay between reconnection attempts
+        this.wsConnectionAttempts = 0;
+        this.maxReconnectAttempts = 5;
+        this.smoothingWindow = 20; // Number of points to use for moving average
         
         // DOM elements
         this.serialStatus = document.getElementById('serial-status');
@@ -103,39 +108,26 @@ class ClockWatcher {
         this.trimArrays();
     }
 
-    calculateLinearRegression(xValues, yValues) {
-        const n = xValues.length;
-        let sumXY = 0, sumX = 0, sumY = 0, sumX2 = 0;
-        
-        for (let i = 0; i < n; i++) {
-            sumXY += xValues[i] * yValues[i];
-            sumX += xValues[i];
-            sumY += yValues[i];
-            sumX2 += xValues[i] * xValues[i];
-        }
-        
-        // Return slope of the regression line
-        return (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-    }
-
     calculateVelocity() {
-        const numPoints = 10; // Increased number of points
-        if (this.timestamps.length < numPoints) return 0;
+        const step = 10;  // Use 10 points of separation for finite difference
+        if (this.timestamps.length < step) return 0;
         
-        const recentTimes = this.timestamps.slice(-numPoints);
-        const recentPositions = this.counts.slice(-numPoints);
+        // Get points separated by 'step' positions
+        const dt = this.timestamps[this.timestamps.length - 1] - this.timestamps[this.timestamps.length - step];
+        const dp = this.counts[this.counts.length - 1] - this.counts[this.counts.length - step];
         
-        return this.calculateLinearRegression(recentTimes, recentPositions);
+        return dp / dt; // degrees per second
     }
 
     calculateAcceleration() {
-        const numPoints = 10; // Increased number of points
-        if (this.velocities.length < numPoints) return 0;
+        const step = 10;  // Use 10 points of separation for finite difference
+        if (this.velocities.length < step) return 0;
         
-        const recentTimes = this.timestamps.slice(-numPoints);
-        const recentVelocities = this.velocities.slice(-numPoints);
+        // Get velocity points separated by 'step' positions
+        const dt = this.timestamps[this.timestamps.length - 1] - this.timestamps[this.timestamps.length - step];
+        const dv = this.velocities[this.velocities.length - 1] - this.velocities[this.velocities.length - step];
         
-        return this.calculateLinearRegression(recentTimes, recentVelocities);
+        return dv / dt; // degrees per second²
     }
 
     trimArrays() {
@@ -148,10 +140,14 @@ class ClockWatcher {
     }
 
     updatePlots() {
+        // Apply smoothing to velocity and acceleration data
+        const smoothedVelocities = this.movingAverage(this.velocities, this.smoothingWindow);
+        const smoothedAccelerations = this.movingAverage(this.accelerations, this.smoothingWindow);
+
         const updates = [
             { id: 'chart', data: this.counts },
-            { id: 'velocity-chart', data: this.velocities },
-            { id: 'acceleration-chart', data: this.accelerations }
+            { id: 'velocity-chart', data: smoothedVelocities },
+            { id: 'acceleration-chart', data: smoothedAccelerations }
         ];
 
         updates.forEach(({ id, data }) => {
@@ -162,6 +158,22 @@ class ClockWatcher {
                 console.error(`Error updating ${id}:`, error);
             });
         });
+    }
+
+    movingAverage(array, window) {
+        if (window <= 1) return array;
+        
+        const result = [];
+        for (let i = 0; i < array.length; i++) {
+            let start = Math.max(0, i - Math.floor(window / 2));
+            let end = Math.min(array.length, i + Math.floor(window / 2) + 1);
+            let sum = 0;
+            for (let j = start; j < end; j++) {
+                sum += array[j];
+            }
+            result.push(sum / (end - start));
+        }
+        return result;
     }
 
     async fetchSerialPorts() {
@@ -219,21 +231,32 @@ class ClockWatcher {
         console.log('Attempting to connect to WebSocket at:', wsUrl);
         
         this.ws = new WebSocket(wsUrl);
+        this.wsConnectionAttempts++;
+
+        // Set connection timeout
+        const connectionTimeout = setTimeout(() => {
+            if (this.ws.readyState !== WebSocket.OPEN) {
+                console.log('WebSocket connection timeout');
+                this.ws.close();
+                this.handleReconnect();
+            }
+        }, this.wsConnectionTimeout);
 
         this.ws.onopen = () => {
             console.log('WebSocket connected successfully');
+            clearTimeout(connectionTimeout);
+            this.wsConnectionAttempts = 0;
             this.wsStatus.textContent = 'WebSocket: Connected';
             this.wsStatus.className = 'status-success';
-            // Fetch serial ports when WebSocket connects
             this.fetchSerialPorts();
         };
 
         this.ws.onclose = (event) => {
             console.log('WebSocket closed:', event);
+            clearTimeout(connectionTimeout);
             this.wsStatus.textContent = 'WebSocket: Disconnected';
             this.wsStatus.className = 'status-error';
-            // Attempt to reconnect after a delay
-            setTimeout(() => this.connectWebSocket(), 1000);
+            this.handleReconnect();
         };
 
         this.ws.onerror = (error) => {
@@ -250,6 +273,16 @@ class ClockWatcher {
                 console.error('Error processing message:', error);
             }
         };
+    }
+
+    handleReconnect() {
+        if (this.wsConnectionAttempts < this.maxReconnectAttempts) {
+            this.wsStatus.textContent = `WebSocket: Reconnecting (Attempt ${this.wsConnectionAttempts}/${this.maxReconnectAttempts})`;
+            setTimeout(() => this.connectWebSocket(), this.wsReconnectDelay);
+        } else {
+            this.wsStatus.textContent = 'WebSocket: Connection failed. Please refresh the page.';
+            console.error('Maximum WebSocket reconnection attempts reached');
+        }
     }
 
     handleTare() {
