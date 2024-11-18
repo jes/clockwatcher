@@ -101,19 +101,49 @@ class ClockWatcher {
     }
 
     calculateVelocity() {
-        if (this.timestamps.length <= 1) return 0;
+        const numPoints = 5; // Number of points to average over
+        if (this.timestamps.length < numPoints) return 0;
         
-        const deltaTime = this.timestamps[this.timestamps.length - 1] - this.timestamps[this.timestamps.length - 2];
-        const deltaPosition = this.counts[this.counts.length - 1] - this.counts[this.counts.length - 2];
-        return deltaPosition / deltaTime;
+        // Get the last n points
+        const recentTimes = this.timestamps.slice(-numPoints);
+        const recentPositions = this.counts.slice(-numPoints);
+        
+        // Calculate velocity using linear regression
+        let sumXY = 0, sumX = 0, sumY = 0, sumX2 = 0;
+        const n = recentTimes.length;
+        
+        for (let i = 0; i < n; i++) {
+            sumXY += recentTimes[i] * recentPositions[i];
+            sumX += recentTimes[i];
+            sumY += recentPositions[i];
+            sumX2 += recentTimes[i] * recentTimes[i];
+        }
+        
+        // Slope of the regression line = velocity
+        return (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
     }
 
     calculateAcceleration() {
-        if (this.velocities.length <= 1) return 0;
+        const numPoints = 5; // Number of points to average over
+        if (this.velocities.length < numPoints) return 0;
         
-        const deltaTime = this.timestamps[this.timestamps.length - 1] - this.timestamps[this.timestamps.length - 2];
-        const deltaVelocity = this.velocities[this.velocities.length - 1] - this.velocities[this.velocities.length - 2];
-        return deltaVelocity / deltaTime;
+        // Get the last n points
+        const recentTimes = this.timestamps.slice(-numPoints);
+        const recentVelocities = this.velocities.slice(-numPoints);
+        
+        // Calculate acceleration using linear regression
+        let sumXY = 0, sumX = 0, sumY = 0, sumX2 = 0;
+        const n = recentTimes.length;
+        
+        for (let i = 0; i < n; i++) {
+            sumXY += recentTimes[i] * recentVelocities[i];
+            sumX += recentTimes[i];
+            sumY += recentVelocities[i];
+            sumX2 += recentTimes[i] * recentTimes[i];
+        }
+        
+        // Slope of the regression line = acceleration
+        return (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
     }
 
     trimArrays() {
