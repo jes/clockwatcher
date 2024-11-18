@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Encoder Readings</title>
+    <title>clockwatcher</title>
     <script src="plotly-latest.min.js"></script>
     <style>
         body {
@@ -91,17 +91,16 @@
     </style>
 </head>
 <body>
-    <h1>Encoder Dashboard</h1>
+    <h1>clockwatcher</h1>
     <div id="status">
         <div class="status-indicators">
             <span id="serial-status" class="status-error">Serial: Not Connected</span>
             <span id="ws-status" class="status-info">WebSocket: Connected</span>
         </div>
         <div class="device-controls">
-            <select id="serial-ports">
-                <option value="">Select Serial Port</option>
-            </select>
+            <select id="serial-ports"></select>
             <button id="connect-btn">Connect</button>
+            <button id="scan-btn">Rescan</button>
         </div>
     </div>
 
@@ -175,23 +174,42 @@
         // Device Selection Elements
         const serialPortsSelect = document.getElementById('serial-ports');
         const connectBtn = document.getElementById('connect-btn');
+        const scanBtn = document.getElementById('scan-btn');
 
-        // Fetch available serial ports on load
-        window.onload = function() {
+        // Function to fetch and populate serial ports
+        function fetchSerialPorts() {
+            serialPortsSelect.innerHTML = ''; // Clear existing options
             fetch('/serial_ports')
                 .then(response => response.json())
                 .then(data => {
-                    data.forEach(port => {
+                    if (data.length === 0) {
                         const option = document.createElement('option');
-                        option.value = port;
-                        option.textContent = port;
+                        option.value = '';
+                        option.textContent = 'No ports available';
                         serialPortsSelect.appendChild(option);
-                    });
+                    } else {
+                        data.forEach(port => {
+                            const option = document.createElement('option');
+                            option.value = port;
+                            option.textContent = port;
+                            serialPortsSelect.appendChild(option);
+                        });
+                    }
                 })
                 .catch(error => {
                     console.error('Error fetching serial ports:', error);
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = 'Error loading ports';
+                    serialPortsSelect.appendChild(option);
                 });
-        };
+        }
+
+        // Fetch available serial ports on load
+        window.onload = fetchSerialPorts;
+
+        // Handle Scan Button Click
+        scanBtn.addEventListener('click', fetchSerialPorts);
 
         // Handle Connect Button Click
         connectBtn.addEventListener('click', () => {
