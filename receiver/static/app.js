@@ -221,6 +221,7 @@ class ClockWatcher {
     updatePlots() {
         const smoothedVelocities = this.movingAverage(this.velocities, this.smoothingWindow);
         const smoothedAccelerations = this.movingAverage(this.accelerations, this.smoothingWindow);
+        const smoothedAmplitudeRate = this.movingAverage(this.amplitudeRateData, this.smoothingWindow);
 
         const updates = [
             { id: 'chart', data: this.counts },
@@ -229,7 +230,7 @@ class ClockWatcher {
             { id: 'period-chart', x: this.periodTimestamps, y: this.periodData },
             { id: 'amplitude-chart', x: this.amplitudeTimestamps, y: this.amplitudeData },
             { id: 'amplitude-period-chart', x: this.amplitudeData, y: this.periodData },
-            { id: 'amplitude-rate-chart', x: this.amplitudeRateTimestamps, y: this.amplitudeRateData }
+            { id: 'amplitude-rate-chart', x: this.amplitudeRateTimestamps, y: smoothedAmplitudeRate }
         ];
 
         updates.forEach(({ id, data, x, y }) => {
@@ -433,6 +434,8 @@ class ClockWatcher {
         
         // Force plot update
         this.updatePlots();
+        this.amplitudeRateData = [];
+        this.amplitudeRateTimestamps = [];
     }
 
     detectCrossingsAndPeaks() {
