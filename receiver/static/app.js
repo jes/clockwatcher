@@ -44,6 +44,10 @@ class ClockWatcher {
         this.periodTimestamps = [];
         this.amplitudeTimestamps = [];
         
+        // Add new arrays for amplitude rate data
+        this.amplitudeRateData = [];
+        this.amplitudeRateTimestamps = [];
+        
         this.initializePlots();
         this.setupEventListeners();
         this.connectWebSocket();
@@ -95,6 +99,11 @@ class ClockWatcher {
                 title: 'Amplitude vs Period',
                 xaxis: { title: 'Amplitude (degrees)' },
                 yaxis: { title: 'Period (s)' }
+            },
+            amplitudeRate: {
+                title: 'Rate of Change of Amplitude',
+                xaxis: { title: 'Time (s)' },
+                yaxis: { title: 'Amplitude Rate (degrees/s)' }
             }
         };
 
@@ -142,6 +151,14 @@ class ClockWatcher {
             mode: 'markers',
             name: 'Amplitude vs Period'
         }], layouts.amplitudePeriod);
+
+        // Initialize amplitude rate plot
+        Plotly.newPlot('amplitude-rate-chart', [{
+            x: this.amplitudeRateTimestamps,
+            y: this.amplitudeRateData,
+            mode: 'lines',
+            name: 'Amplitude Rate'
+        }], layouts.amplitudeRate);
     }
 
     addReading(message) {
@@ -211,7 +228,8 @@ class ClockWatcher {
             { id: 'acceleration-chart', data: smoothedAccelerations },
             { id: 'period-chart', x: this.periodTimestamps, y: this.periodData },
             { id: 'amplitude-chart', x: this.amplitudeTimestamps, y: this.amplitudeData },
-            { id: 'amplitude-period-chart', x: this.amplitudeData, y: this.periodData }
+            { id: 'amplitude-period-chart', x: this.amplitudeData, y: this.periodData },
+            { id: 'amplitude-rate-chart', x: this.amplitudeRateTimestamps, y: this.amplitudeRateData }
         ];
 
         updates.forEach(({ id, data, x, y }) => {
@@ -364,6 +382,9 @@ class ClockWatcher {
         this.periodTimestamps = this.periodTimestamps.map(time => time - currentTime);
         this.amplitudeTimestamps = this.amplitudeTimestamps.map(time => time - currentTime);
         
+        // Update timestamps for amplitude rate
+        this.amplitudeRateTimestamps = this.amplitudeRateTimestamps.map(time => time - currentTime);
+        
         // Update the display
         document.getElementById('current-position').textContent = 
             `${(this.counts[this.counts.length - 1] || 0).toFixed(0)}°`;
@@ -469,6 +490,24 @@ class ClockWatcher {
             const amplitude = Math.abs(this.lastPositivePeak - this.lastNegativePeak);
             
             if (Math.abs(amplitude) > 4) {
+                const currentTime = this.timestamps[this.timestamps.length - 1];
+                
+                // Calculate rate of change of amplitude
+                if (this.amplitudeData.length > 1) {
+                    const deltaAmplitude = amplitude - this.amplitudeData[this.amplitudeData.length - 1];
+                    const deltaTime = currentTime - this.amplitudeTimestamps[this.amplitudeTimestamps.length - 1];
+                    const amplitudeRate = deltaAmplitude / deltaTime;
+                    
+                    this.amplitudeRateData.push(amplitudeRate);
+                    this.amplitudeRateTimestamps.push(currentTime);
+                    
+                    // Trim amplitude rate data if too long
+                    if (this.amplitudeRateData.length > this.maxPoints) {
+                        this.amplitudeRateData = this.amplitudeRateData.slice(-this.maxPoints);
+                        this.amplitudeRateTimestamps = this.amplitudeRateTimestamps.slice(-this.maxPoints);
+                    }
+                }
+
                 // Add amplitude data point
                 this.amplitudeData.push(amplitude);
                 this.amplitudeTimestamps.push(this.timestamps[this.timestamps.length - 1]);
