@@ -69,42 +69,67 @@ class ClockWatcher {
             document.getElementById(id).style.height = '400px';
         });
 
+        const commonLayoutConfig = {
+            autosize: true,
+            responsive: true,
+            margin: {
+                l: 50,
+                r: 50,
+                t: 40,
+                b: 40
+            },
+            width: null,
+            height: 400
+        };
+
         const layouts = {
             position: {
+                ...commonLayoutConfig,
                 title: 'Balance wheel position',
                 xaxis: { title: 'Time (s)' },
                 yaxis: { title: 'Position (degrees)' }
             },
             velocity: {
+                ...commonLayoutConfig,
                 title: 'Balance wheel velocity',
                 xaxis: { title: 'Time (s)' },
                 yaxis: { title: 'Velocity (degrees/s)' }
             },
             acceleration: {
+                ...commonLayoutConfig,
                 title: 'Balance wheel acceleration',
                 xaxis: { title: 'Time (s)' },
                 yaxis: { title: 'Acceleration (degrees/s²)' }
             },
             period: {
+                ...commonLayoutConfig,
                 title: 'Period',
                 xaxis: { title: 'Time (s)' },
                 yaxis: { title: 'Period (s)' }
             },
             amplitude: {
+                ...commonLayoutConfig,
                 title: 'Amplitude',
                 xaxis: { title: 'Time (s)' },
                 yaxis: { title: 'Amplitude (degrees)' }
             },
             amplitudePeriod: {
+                ...commonLayoutConfig,
                 title: 'Amplitude vs Period',
                 xaxis: { title: 'Amplitude (degrees)' },
                 yaxis: { title: 'Period (s)' }
             },
             amplitudeRate: {
+                ...commonLayoutConfig,
                 title: 'Rate of Change of Amplitude',
                 xaxis: { title: 'Time (s)' },
                 yaxis: { title: 'Amplitude Rate (degrees/s)' }
             }
+        };
+
+        const config = {
+            responsive: true,
+            displayModeBar: false
         };
 
         // Initialize all plots
@@ -113,21 +138,21 @@ class ClockWatcher {
             y: this.counts,
             mode: 'lines',
             name: 'Position'
-        }], layouts.position);
+        }], layouts.position, config);
 
         Plotly.newPlot('velocity-chart', [{
             x: this.timestamps,
             y: this.velocities,
             mode: 'lines',
             name: 'Velocity'
-        }], layouts.velocity);
+        }], layouts.velocity, config);
 
         Plotly.newPlot('acceleration-chart', [{
             x: this.timestamps,
             y: this.accelerations,
             mode: 'lines',
             name: 'Acceleration'
-        }], layouts.acceleration);
+        }], layouts.acceleration, config);
 
         // Initialize period and amplitude plots
         Plotly.newPlot('period-chart', [{
@@ -135,14 +160,14 @@ class ClockWatcher {
             y: this.periodData,
             mode: 'lines',
             name: 'Period'
-        }], layouts.period);
+        }], layouts.period, config);
 
         Plotly.newPlot('amplitude-chart', [{
             x: this.amplitudeTimestamps,
             y: this.amplitudeData,
             mode: 'lines',
             name: 'Amplitude'
-        }], layouts.amplitude);
+        }], layouts.amplitude, config);
 
         // Initialize amplitude vs period plot
         Plotly.newPlot('amplitude-period-chart', [{
@@ -150,7 +175,7 @@ class ClockWatcher {
             y: this.periodData,
             mode: 'markers',
             name: 'Amplitude vs Period'
-        }], layouts.amplitudePeriod);
+        }], layouts.amplitudePeriod, config);
 
         // Initialize amplitude rate plot
         Plotly.newPlot('amplitude-rate-chart', [{
@@ -158,7 +183,7 @@ class ClockWatcher {
             y: this.amplitudeRateData,
             mode: 'lines',
             name: 'Amplitude Rate'
-        }], layouts.amplitudeRate);
+        }], layouts.amplitudeRate, config);
     }
 
     addReading(message) {
@@ -221,7 +246,6 @@ class ClockWatcher {
     updatePlots() {
         const smoothedVelocities = this.movingAverage(this.velocities, this.smoothingWindow);
         const smoothedAccelerations = this.movingAverage(this.accelerations, this.smoothingWindow);
-        const smoothedAmplitudeRate = this.movingAverage(this.amplitudeRateData, this.smoothingWindow);
 
         const updates = [
             { id: 'chart', data: this.counts },
@@ -230,7 +254,7 @@ class ClockWatcher {
             { id: 'period-chart', x: this.periodTimestamps, y: this.periodData },
             { id: 'amplitude-chart', x: this.amplitudeTimestamps, y: this.amplitudeData },
             { id: 'amplitude-period-chart', x: this.amplitudeData, y: this.periodData },
-            { id: 'amplitude-rate-chart', x: this.amplitudeRateTimestamps, y: smoothedAmplitudeRate }
+            { id: 'amplitude-rate-chart', x: this.amplitudeRateTimestamps, y: this.amplitudeRateData }
         ];
 
         updates.forEach(({ id, data, x, y }) => {
