@@ -417,6 +417,8 @@ class ClockWatcher {
         this.amplitudeData = [];
         this.periodTimestamps = [];
         this.amplitudeTimestamps = [];
+        this.amplitudeRateData = [];
+        this.amplitudeRateTimestamps = [];
         
         // Reset peak and crossing detection
         this.lastPositivePeak = null;
@@ -434,8 +436,6 @@ class ClockWatcher {
         
         // Force plot update
         this.updatePlots();
-        this.amplitudeRateData = [];
-        this.amplitudeRateTimestamps = [];
     }
 
     detectCrossingsAndPeaks() {
