@@ -7,6 +7,7 @@ class ClockWatcher {
         this.accelerations = [];
         this.ws = null;
         this.tareOffset = 0;
+        this.timeOffset = 0;
         this.wsConnectionTimeout = 5000; // 5 second timeout
         this.wsReconnectDelay = 1000;   // 1 second delay between reconnection attempts
         this.wsConnectionAttempts = 0;
@@ -144,7 +145,7 @@ class ClockWatcher {
     }
 
     addReading(message) {
-        const timeSeconds = message.TotalMicros / 1000000;
+        const timeSeconds = (message.TotalMicros / 1000000) - this.timeOffset;
         const degrees = (message.Count * 2) - this.tareOffset;
         
         // Update instantaneous value display
@@ -349,12 +350,19 @@ class ClockWatcher {
     }
 
     handleTare() {
-        // Get the last position value
+        // Get the last position value and current timestamp
         const currentPosition = this.counts[this.counts.length - 1] || 0;
+        const currentTime = this.timestamps[this.timestamps.length - 1] || 0;
+        
+        // Update offsets
         this.tareOffset += currentPosition;
+        this.timeOffset += currentTime;
         
         // Update existing data points
         this.counts = this.counts.map(count => count - currentPosition);
+        this.timestamps = this.timestamps.map(time => time - currentTime);
+        this.periodTimestamps = this.periodTimestamps.map(time => time - currentTime);
+        this.amplitudeTimestamps = this.amplitudeTimestamps.map(time => time - currentTime);
         
         // Update the display
         document.getElementById('current-position').textContent = 
