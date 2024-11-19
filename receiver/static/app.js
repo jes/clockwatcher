@@ -421,7 +421,7 @@ class ClockWatcher {
                 if (this.lastZeroCrossing !== null) {
                     const positivePeriod = currentTime - this.lastZeroCrossing;
                     document.getElementById('positive-period').textContent = 
-                        `${positivePeriod.toFixed(3)}s`;
+                        `${positivePeriod.toFixed(6)}s`;
                 }
                 this.lastZeroCrossing = currentTime;
                 this.updateTotalPeriod();
@@ -431,7 +431,7 @@ class ClockWatcher {
                 if (this.lastZeroCrossing !== null) {
                     const negativePeriod = currentTime - this.lastZeroCrossing;
                     document.getElementById('negative-period').textContent = 
-                        `${negativePeriod.toFixed(3)}s`;
+                        `${negativePeriod.toFixed(6)}s`;
                 }
                 this.lastZeroCrossing = currentTime;
                 this.updateTotalPeriod();
@@ -460,23 +460,25 @@ class ClockWatcher {
         if (this.lastPositivePeak !== null && this.lastNegativePeak !== null && amplitudeUpdated) {
             const amplitude = Math.abs(this.lastPositivePeak - this.lastNegativePeak);
             
-            // Add amplitude data point
-            this.amplitudeData.push(amplitude);
-            this.amplitudeTimestamps.push(this.timestamps[this.timestamps.length - 1]);
+            if (Math.abs(amplitude) > 4) {
+                // Add amplitude data point
+                this.amplitudeData.push(amplitude);
+                this.amplitudeTimestamps.push(this.timestamps[this.timestamps.length - 1]);
+                
+                // Trim amplitude data if too long
+                if (this.amplitudeData.length > this.maxPoints) {
+                    this.amplitudeData = this.amplitudeData.slice(-this.maxPoints);
+                    this.amplitudeTimestamps = this.amplitudeTimestamps.slice(-this.maxPoints);
+                }
             
-            // Trim amplitude data if too long
-            if (this.amplitudeData.length > this.maxPoints) {
-                this.amplitudeData = this.amplitudeData.slice(-this.maxPoints);
-                this.amplitudeTimestamps = this.amplitudeTimestamps.slice(-this.maxPoints);
+                // Update displays
+                document.getElementById('current-amplitude').textContent = 
+                    `${amplitude.toFixed(0)}°`;
+                document.getElementById('positive-peak').textContent = 
+                    `+${this.lastPositivePeak.toFixed(0)}°`;
+                document.getElementById('negative-peak').textContent = 
+                    `${this.lastNegativePeak.toFixed(0)}°`;
             }
-            
-            // Update displays
-            document.getElementById('current-amplitude').textContent = 
-                `${amplitude.toFixed(0)}°`;
-            document.getElementById('positive-peak').textContent = 
-                `+${this.lastPositivePeak.toFixed(0)}°`;
-            document.getElementById('negative-peak').textContent = 
-                `${this.lastNegativePeak.toFixed(0)}°`;
         }
     }
 
@@ -489,7 +491,7 @@ class ClockWatcher {
             // Only add period data if both halves are nonzero
             if (negativePeriod > 0 && positivePeriod > 0) {
                 document.getElementById('current-period').textContent = 
-                    `${totalPeriod.toFixed(3)}s`;
+                    `${totalPeriod.toFixed(6)}s`;
             
                 // Add period data point
                 this.periodData.push(totalPeriod);
