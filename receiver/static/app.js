@@ -393,22 +393,14 @@ class ClockWatcher {
     }
 
     handleTare() {
-        // Get the last position value and current timestamp
+        // Get the last position value
         const currentPosition = this.counts[this.counts.length - 1] || 0;
-        const currentTime = this.timestamps[this.timestamps.length - 1] || 0;
         
-        // Update offsets
+        // Update tare offset
         this.tareOffset += currentPosition;
-        this.timeOffset += currentTime;
         
         // Update existing data points
         this.counts = this.counts.map(count => count - currentPosition);
-        this.timestamps = this.timestamps.map(time => time - currentTime);
-        this.periodTimestamps = this.periodTimestamps.map(time => time - currentTime);
-        this.amplitudeTimestamps = this.amplitudeTimestamps.map(time => time - currentTime);
-        
-        // Update timestamps for amplitude rate
-        this.amplitudeRateTimestamps = this.amplitudeRateTimestamps.map(time => time - currentTime);
         
         // Update the display
         document.getElementById('current-position').textContent = 
@@ -432,6 +424,9 @@ class ClockWatcher {
     }
 
     handleReset() {
+        // reset effective timestamp to 0
+        this.timeOffset += this.timestamps[this.timestamps.length - 1] || 0;
+
         // Clear all data arrays
         this.timestamps = [];
         this.counts = [];
