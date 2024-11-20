@@ -1,6 +1,6 @@
 class ClockWatcher {
     constructor() {
-        this.maxPoints = 500;
+        this.maxPoints = 2000;
         this.timestamps = [];
         this.counts = [];
         this.velocities = [];
@@ -187,6 +187,11 @@ class ClockWatcher {
     }
 
     addReading(message) {
+        // Set initial time offset on first reading
+        if (this.timestamps.length === 0) {
+            this.timeOffset = message.TotalMicros / 1000000;
+        }
+
         const timeSeconds = (message.TotalMicros / 1000000) - this.timeOffset;
         const degrees = (message.Count * 2) - this.tareOffset;
         
