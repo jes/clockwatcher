@@ -471,7 +471,8 @@ class ClockWatcher {
         const currentTime = this.timestamps[n - 1];
 
         // Zero crossing detection
-        if (prev !== null && current !== null) {
+        const timeSinceLastZeroCrossing = currentTime - this.lastZeroCrossing;
+        if (prev !== null && current !== null && timeSinceLastZeroCrossing > 0.1) {
             // Positive-going zero crossing
             if (prev <= 0 && current > 0) {
                 if (this.lastZeroCrossing !== null) {
