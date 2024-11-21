@@ -517,7 +517,7 @@ class ClockWatcher {
         if (this.lastPositivePeak !== null && this.lastNegativePeak !== null && amplitudeUpdated) {
             const amplitude = Math.abs(this.lastPositivePeak - this.lastNegativePeak);
             
-            if (Math.abs(amplitude) > 4) {
+            if (Math.abs(amplitude) > 10) {
                 const currentTime = this.timestamps[this.timestamps.length - 1];
                 
                 // Calculate rate of change of amplitude
