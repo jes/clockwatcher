@@ -21,6 +21,13 @@ h1 {
     margin-bottom: 20px;
 }
 
+.chart-group {
+    border: 1px solid #888;
+    border-radius: 4px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
 .chart-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -28,12 +35,11 @@ h1 {
     margin: 20px 0;
 }
 
-.chart-grid > div:first-child {
+.double-chart {
     grid-column: 1 / -1;
 }
 
-#chart, #velocity-chart, #acceleration-chart, #amplitude-chart, 
-#period-chart, #amplitude-period-chart, #amplitude-rate-chart {
+.chart {
     height: 400px;
     background: white;
     border: 1px solid #ddd;

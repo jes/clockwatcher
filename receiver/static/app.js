@@ -61,14 +61,12 @@ class ClockWatcher {
         this.scanBtn.addEventListener('click', () => this.fetchSerialPorts());
         this.tareBtn.addEventListener('click', () => this.handleTare());
         this.resetBtn.addEventListener('click', () => this.handleReset());
+        
+        // Add listener for averaging window changes
+        document.getElementById('avg-window').addEventListener('change', () => this.updatePlots());
     }
 
     initializePlots() {
-        // Update CSS for charts
-        ['chart', 'velocity-chart', 'acceleration-chart'].forEach(id => {
-            document.getElementById(id).style.height = '400px';
-        });
-
         const commonLayoutConfig = {
             autosize: true,
             responsive: true,
@@ -101,6 +99,7 @@ class ClockWatcher {
                 xaxis: { title: 'Time (s)' },
                 yaxis: { title: 'Acceleration (degrees/s²)' }
             },
+
             period: {
                 ...commonLayoutConfig,
                 title: 'Period',
@@ -113,17 +112,42 @@ class ClockWatcher {
                 xaxis: { title: 'Time (s)' },
                 yaxis: { title: 'Amplitude (degrees)' }
             },
+            amplitudeRate: {
+                ...commonLayoutConfig,
+                title: 'Rate of Change of Amplitude',
+                xaxis: { title: 'Time (s)' },
+                yaxis: { title: 'Amplitude Rate (degrees/s)' }
+            },
             amplitudePeriod: {
                 ...commonLayoutConfig,
                 title: 'Amplitude vs Period',
                 xaxis: { title: 'Amplitude (degrees)' },
                 yaxis: { title: 'Period (s)' }
             },
-            amplitudeRate: {
+
+            periodAvg: {
                 ...commonLayoutConfig,
-                title: 'Rate of Change of Amplitude',
+                title: 'Period (Averaged)',
+                xaxis: { title: 'Time (s)' },
+                yaxis: { title: 'Period (s)' }
+            },
+            amplitudeAvg: {
+                ...commonLayoutConfig,
+                title: 'Amplitude (Averaged)',
+                xaxis: { title: 'Time (s)' },
+                yaxis: { title: 'Amplitude (degrees)' }
+            },
+            amplitudeRateAvg: {
+                ...commonLayoutConfig,
+                title: 'Rate of Change of Amplitude (Averaged)',
                 xaxis: { title: 'Time (s)' },
                 yaxis: { title: 'Amplitude Rate (degrees/s)' }
+            },
+            amplitudePeriodAvg: {
+                ...commonLayoutConfig,
+                title: 'Amplitude vs Period (Averaged)',
+                xaxis: { title: 'Amplitude (degrees)' },
+                yaxis: { title: 'Period (s)' }
             }
         };
 
@@ -132,21 +156,18 @@ class ClockWatcher {
             displayModeBar: false
         };
 
-        // Initialize all plots
-        Plotly.newPlot('chart', [{
+        Plotly.newPlot('position-chart', [{
             x: this.timestamps,
             y: this.counts,
             mode: 'lines',
             name: 'Position'
         }], layouts.position, config);
-
         Plotly.newPlot('velocity-chart', [{
             x: this.timestamps,
             y: this.velocities,
             mode: 'lines',
             name: 'Velocity'
         }], layouts.velocity, config);
-
         Plotly.newPlot('acceleration-chart', [{
             x: this.timestamps,
             y: this.accelerations,
@@ -154,22 +175,24 @@ class ClockWatcher {
             name: 'Acceleration'
         }], layouts.acceleration, config);
 
-        // Initialize period and amplitude plots
         Plotly.newPlot('period-chart', [{
             x: this.periodTimestamps,
             y: this.periodData,
             mode: 'lines',
             name: 'Period'
         }], layouts.period, config);
-
         Plotly.newPlot('amplitude-chart', [{
             x: this.amplitudeTimestamps,
             y: this.amplitudeData,
             mode: 'lines',
             name: 'Amplitude'
         }], layouts.amplitude, config);
-
-        // Initialize amplitude vs period plot
+        Plotly.newPlot('amplitude-rate-chart', [{
+            x: this.amplitudeRateTimestamps,
+            y: this.amplitudeRateData,
+            mode: 'lines',
+            name: 'Amplitude Rate'
+        }], layouts.amplitudeRate, config);
         Plotly.newPlot('amplitude-period-chart', [{
             x: this.amplitudeData,
             y: this.periodData,
@@ -177,13 +200,30 @@ class ClockWatcher {
             name: 'Amplitude vs Period'
         }], layouts.amplitudePeriod, config);
 
-        // Initialize amplitude rate plot
-        Plotly.newPlot('amplitude-rate-chart', [{
+        Plotly.newPlot('period-chart-avg', [{
+            x: this.periodTimestamps,
+            y: this.periodData,
+            mode: 'lines',
+            name: 'Period (Averaged)'
+        }], layouts.periodAvg, config);
+        Plotly.newPlot('amplitude-chart-avg', [{
+            x: this.amplitudeTimestamps,
+            y: this.amplitudeData,
+            mode: 'lines',
+            name: 'Amplitude (Averaged)'
+        }], layouts.amplitudeAvg, config);
+        Plotly.newPlot('amplitude-rate-chart-avg', [{
             x: this.amplitudeRateTimestamps,
             y: this.amplitudeRateData,
             mode: 'lines',
-            name: 'Amplitude Rate'
-        }], layouts.amplitudeRate, config);
+            name: 'Amplitude Rate (Averaged)'
+        }], layouts.amplitudeRateAvg, config);
+        Plotly.newPlot('amplitude-period-chart-avg', [{
+            x: this.amplitudeData,
+            y: this.periodData,
+            mode: 'markers',
+            name: 'Amplitude vs Period (Averaged)'
+        }], layouts.amplitudePeriodAvg, config);
     }
 
     addReading(message) {
@@ -252,14 +292,28 @@ class ClockWatcher {
         const smoothedVelocities = this.movingAverage(this.velocities, this.smoothingWindow);
         const smoothedAccelerations = this.movingAverage(this.accelerations, this.smoothingWindow);
 
+        // Get averaging window size from input
+        const avgWindow = getAveragingWindow();
+
+        // Calculate averaged data
+        const avgAmplitude = this.movingAverage(this.amplitudeData, avgWindow);
+        const avgPeriod = this.movingAverage(this.periodData, avgWindow);
+        const avgAmplitudeRate = this.movingAverage(this.amplitudeRateData, avgWindow);
+
         const updates = [
-            { id: 'chart', data: this.counts },
+            { id: 'position-chart', data: this.counts },
             { id: 'velocity-chart', data: smoothedVelocities },
             { id: 'acceleration-chart', data: smoothedAccelerations },
+
             { id: 'period-chart', x: this.periodTimestamps, y: this.periodData },
             { id: 'amplitude-chart', x: this.amplitudeTimestamps, y: this.amplitudeData },
             { id: 'amplitude-period-chart', x: this.amplitudeData, y: this.periodData },
-            { id: 'amplitude-rate-chart', x: this.amplitudeRateTimestamps, y: this.amplitudeRateData }
+            { id: 'amplitude-rate-chart', x: this.amplitudeRateTimestamps, y: this.amplitudeRateData },
+
+            { id: 'period-chart-avg', x: this.periodTimestamps, y: avgPeriod },
+            { id: 'amplitude-chart-avg', x: this.amplitudeTimestamps, y: avgAmplitude },
+            { id: 'amplitude-rate-chart-avg', x: this.amplitudeRateTimestamps, y: avgAmplitudeRate },
+            { id: 'amplitude-period-chart-avg', x: avgAmplitude, y: avgPeriod }
         ];
 
         updates.forEach(({ id, data, x, y }) => {
@@ -580,6 +634,13 @@ class ClockWatcher {
             }
         }
     }
+}
+
+// Add this function to get the averaging window size
+function getAveragingWindow() {
+    const windowInput = document.getElementById('avg-window');
+    const value = parseInt(windowInput.value);
+    return isNaN(value) || value < 1 ? 1 : value;
 }
 
 // Initialize the application

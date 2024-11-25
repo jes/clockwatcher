@@ -44,14 +44,32 @@
         </div>
     </div>
 
-    <div class="chart-grid">
-        <div id="chart"></div>
-        <div id="velocity-chart"></div>
-        <div id="acceleration-chart"></div>
-        <div id="amplitude-chart"></div>
-        <div id="period-chart"></div>
-        <div id="amplitude-rate-chart"></div>
-        <div id="amplitude-period-chart"></div>
+    <div class="chart-group">
+        <h2>Raw</h2>
+        <div class="chart-grid">
+            <div id="position-chart" class="chart double-chart"></div>
+            <div id="velocity-chart" class="chart"></div>
+            <div id="acceleration-chart" class="chart"></div>
+        </div>
+    </div>
+    <div class="chart-group">
+        <h2>Computed</h2>
+        <div class="chart-grid">
+            <div id="amplitude-chart" class="chart"></div>
+            <div id="period-chart" class="chart"></div>
+            <div id="amplitude-rate-chart" class="chart"></div>
+            <div id="amplitude-period-chart" class="chart"></div>
+        </div>
+    </div>
+    <div class="chart-group">
+        <h2>Averaged</h2>
+        Moving average over <input type="number" id="avg-window" value="10"> samples
+        <div class="chart-grid">
+            <div id="amplitude-chart-avg" class="chart"></div>
+            <div id="period-chart-avg" class="chart"></div>
+            <div id="amplitude-rate-chart-avg" class="chart"></div>
+            <div id="amplitude-period-chart-avg" class="chart"></div>
+        </div>
     </div>
     <script src="app.js"></script>
 </body>
