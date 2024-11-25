@@ -483,9 +483,6 @@ class ClockWatcher {
     }
 
     handleReset() {
-        // reset effective timestamp to 0
-        this.timeOffset += this.timestamps[this.timestamps.length - 1] || 0;
-
         // Clear all data arrays
         this.timestamps = [];
         this.counts = [];
