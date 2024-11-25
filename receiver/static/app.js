@@ -54,6 +54,10 @@ class ClockWatcher {
         
         // Add plot update interval
         setInterval(() => this.updatePlots(), 100);
+        
+        // Add status tracking
+        this.serialConnected = false;
+        this.serialError = null;
     }
 
     setupEventListeners() {
@@ -228,7 +232,7 @@ class ClockWatcher {
 
     addReading(message) {
         // Set initial time offset on first reading
-        if (this.timestamps.length === 0 && typeof message.TotalMicros === 'number') {
+        if (this.timestamps.length === 0 && message.TotalMicros !== undefined) {
             this.timeOffset = message.TotalMicros / 1000000;
         }
 
@@ -432,12 +436,7 @@ class ClockWatcher {
         };
 
         this.ws.onmessage = (event) => {
-            try {
-                const message = JSON.parse(event.data);
-                this.addReading(message);
-            } catch (error) {
-                console.error('Error processing message:', error);
-            }
+            this.handleWebSocketMessage(event);
         };
     }
 
@@ -628,6 +627,60 @@ class ClockWatcher {
                     this.periodData = this.periodData.slice(-this.maxPoints);
                     this.periodTimestamps = this.periodTimestamps.slice(-this.maxPoints);
                 }
+            }
+        }
+    }
+
+    handleWebSocketMessage(event) {
+        try {
+            const message = JSON.parse(event.data);
+            
+            // Check if it's a status message by looking for Device property
+            if (message.Device) {
+                this.handleStatusMessage(message);
+            } 
+            // Otherwise treat it as a reading message
+            else if (message.TotalMicros !== undefined) {
+                this.addReading(message);
+            } else {
+                console.warn('Unknown message format:', message);
+            }
+        } catch (error) {
+            console.error('Error processing message:', error);
+        }
+    }
+
+    handleStatusMessage(message) {
+        if (message.Device === 'SERIAL') {
+            switch (message.Status) {
+                case 'CONNECTED':
+                    this.serialStatus.textContent = 'Serial: Connected';
+                    this.serialStatus.className = 'status-success';
+                    this.serialConnected = true;
+                    this.serialError = null;
+                    break;
+                    
+                case 'DISCONNECTED':
+                    this.serialStatus.textContent = 'Serial: Disconnected';
+                    this.serialStatus.className = 'status-error';
+                    this.serialConnected = false;
+                    break;
+                    
+                case 'OVERFLOW':
+                    console.warn('Serial buffer overflow:', message.Error);
+                    this.serialStatus.textContent = 'Serial: Buffer Overflow';
+                    this.serialStatus.className = 'status-info';
+                    break;
+                    
+                case 'ERROR':
+                    console.error('Serial error:', message.Error);
+                    this.serialStatus.textContent = `Serial: Error - ${message.Error}`;
+                    this.serialStatus.className = 'status-error';
+                    this.serialError = message.Error;
+                    break;
+                    
+                default:
+                    console.warn('Unknown serial status:', message.Status);
             }
         }
     }
