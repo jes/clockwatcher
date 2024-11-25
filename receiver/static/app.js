@@ -330,14 +330,14 @@ class ClockWatcher {
         if (window <= 1) return array;
         
         const result = [];
+        
         for (let i = 0; i < array.length; i++) {
-            let start = Math.max(0, i - Math.floor(window / 2));
-            let end = Math.min(array.length, i + Math.floor(window / 2) + 1);
+            let start = Math.max(0, i - window + 1);
             let sum = 0;
-            for (let j = start; j < end; j++) {
+            for (let j = start; j <= i; j++) {
                 sum += array[j];
             }
-            result.push(sum / (end - start));
+            result.push(sum / (i - start + 1));
         }
         return result;
     }
