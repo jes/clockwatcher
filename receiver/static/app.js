@@ -228,7 +228,7 @@ class ClockWatcher {
 
     addReading(message) {
         // Set initial time offset on first reading
-        if (this.timestamps.length === 0) {
+        if (this.timestamps.length === 0 && typeof message.TotalMicros === 'number') {
             this.timeOffset = message.TotalMicros / 1000000;
         }
 
