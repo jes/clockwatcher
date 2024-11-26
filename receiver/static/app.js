@@ -173,13 +173,15 @@ class ClockWatcher {
         return dv / dt; // degrees per second²
     }
 
+    trimArray(array) {
+        return array.length > this.maxPoints ? array.slice(-this.maxPoints) : array;
+    }
+
     trimArrays() {
-        if (this.timestamps.length > this.maxPoints) {
-            this.timestamps = this.timestamps.slice(-this.maxPoints);
-            this.counts = this.counts.slice(-this.maxPoints);
-            this.velocities = this.velocities.slice(-this.maxPoints);
-            this.accelerations = this.accelerations.slice(-this.maxPoints);
-        }
+        this.timestamps = this.trimArray(this.timestamps);
+        this.counts = this.trimArray(this.counts);
+        this.velocities = this.trimArray(this.velocities);
+        this.accelerations = this.trimArray(this.accelerations);
     }
 
     updatePlots() {
@@ -541,36 +543,40 @@ class ClockWatcher {
     }
 
     handleStatusMessage(message) {
+        const STATUS_HANDLERS = {
+            CONNECTED: (status) => ({
+                text: 'Serial: Connected',
+                class: 'status-success',
+                connected: true,
+                error: null
+            }),
+            DISCONNECTED: () => ({
+                text: 'Serial: Disconnected',
+                class: 'status-error',
+                connected: false
+            }),
+            OVERFLOW: (status) => ({
+                text: 'Serial: Buffer Overflow',
+                class: 'status-info',
+                error: null
+            }),
+            ERROR: (status) => ({
+                text: `Serial: Error - ${status.Error}`,
+                class: 'status-error',
+                error: status.Error
+            })
+        };
+
         if (message.Device === 'SERIAL') {
-            switch (message.Status) {
-                case 'CONNECTED':
-                    this.serialStatus.textContent = 'Serial: Connected';
-                    this.serialStatus.className = 'status-success';
-                    this.serialConnected = true;
-                    this.serialError = null;
-                    break;
-                    
-                case 'DISCONNECTED':
-                    this.serialStatus.textContent = 'Serial: Disconnected';
-                    this.serialStatus.className = 'status-error';
-                    this.serialConnected = false;
-                    break;
-                    
-                case 'OVERFLOW':
-                    console.warn('Serial buffer overflow:', message.Error);
-                    this.serialStatus.textContent = 'Serial: Buffer Overflow';
-                    this.serialStatus.className = 'status-info';
-                    break;
-                    
-                case 'ERROR':
-                    console.error('Serial error:', message.Error);
-                    this.serialStatus.textContent = `Serial: Error - ${message.Error}`;
-                    this.serialStatus.className = 'status-error';
-                    this.serialError = message.Error;
-                    break;
-                    
-                default:
-                    console.warn('Unknown serial status:', message.Status);
+            const handler = STATUS_HANDLERS[message.Status];
+            if (handler) {
+                const status = handler(message);
+                this.serialStatus.textContent = status.text;
+                this.serialStatus.className = status.class;
+                if (status.connected !== undefined) this.serialConnected = status.connected;
+                if (status.error !== undefined) this.serialError = status.error;
+            } else {
+                console.warn('Unknown serial status:', message.Status);
             }
         }
     }
