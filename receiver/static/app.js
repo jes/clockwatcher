@@ -71,53 +71,51 @@ class ClockWatcher {
     }
 
     initializePlots() {
-        const createLayout = (title, xAxisTitle, yAxisTitle) => ({
-            autosize: true,
-            responsive: true,
-            margin: { l: 50, r: 50, t: 40, b: 40 },
-            width: null,
-            height: 400,
-            title,
-            xaxis: { title: xAxisTitle },
-            yaxis: { title: yAxisTitle }
-        });
+        const createPlot = (elementId, x, y, title, xAxisTitle, yAxisTitle, mode = 'lines') => {
+            const layout = {
+                autosize: true,
+                responsive: true,
+                margin: { l: 50, r: 50, t: 40, b: 40 },
+                width: null,
+                height: 400,
+                title,
+                xaxis: { title: xAxisTitle },
+                yaxis: { title: yAxisTitle }
+            };
 
-        const layouts = {
-            position: createLayout('Balance wheel position', 'Time (s)', 'Position (degrees)'),
-            velocity: createLayout('Balance wheel velocity', 'Time (s)', 'Velocity (degrees/s)'),
-            acceleration: createLayout('Balance wheel acceleration', 'Time (s)', 'Acceleration (degrees/s²)'),
-
-            period: createLayout('Period', 'Time (s)', 'Period (s)'),
-            amplitude: createLayout('Amplitude', 'Time (s)', 'Amplitude (degrees)'),
-            amplitudeRate: createLayout('Rate of Change of Amplitude', 'Time (s)', 'Amplitude Rate (degrees/s)'),
-            amplitudePeriod: createLayout('Amplitude vs Period', 'Amplitude (degrees)', 'Period (s)'),
-
-            periodAvg: createLayout('Period (Averaged)', 'Time (s)', 'Period (s)'),
-            amplitudeAvg: createLayout('Amplitude (Averaged)', 'Time (s)', 'Amplitude (degrees)'),
-            amplitudeRateAvg: createLayout('Rate of Change of Amplitude (Averaged)', 'Time (s)', 'Amplitude Rate (degrees/s)'),
-            amplitudePeriodAvg: createLayout('Amplitude vs Period (Averaged)', 'Amplitude (degrees)', 'Period (s)')
-        };
-
-        const createPlot = (elementId, x, y, layout, mode = 'lines') => {
             Plotly.newPlot(elementId, [{
-                x, y, mode, 
-                name: layout.title
+                x, y, mode,
+                name: title
             }], layout, { responsive: true, displayModeBar: false });
         };
 
-        createPlot('position-chart', this.timestamps, this.counts, layouts.position);
-        createPlot('velocity-chart', this.timestamps, this.velocities, layouts.velocity);
-        createPlot('acceleration-chart', this.timestamps, this.accelerations, layouts.acceleration);
+        // Basic measurements
+        createPlot('position-chart', this.timestamps, this.counts, 
+            'Balance wheel position', 'Time (s)', 'Position (degrees)');
+        createPlot('velocity-chart', this.timestamps, this.velocities,
+            'Balance wheel velocity', 'Time (s)', 'Velocity (degrees/s)');
+        createPlot('acceleration-chart', this.timestamps, this.accelerations,
+            'Balance wheel acceleration', 'Time (s)', 'Acceleration (degrees/s²)');
 
-        createPlot('period-chart', this.periodTimestamps, this.periodData, layouts.period);
-        createPlot('amplitude-chart', this.amplitudeTimestamps, this.amplitudeData, layouts.amplitude);
-        createPlot('amplitude-rate-chart', this.amplitudeRateTimestamps, this.amplitudeRateData, layouts.amplitudeRate);
-        createPlot('amplitude-period-chart', this.amplitudeData, this.periodData, layouts.amplitudePeriod);
+        // Raw measurements
+        createPlot('period-chart', this.periodTimestamps, this.periodData,
+            'Period', 'Time (s)', 'Period (s)');
+        createPlot('amplitude-chart', this.amplitudeTimestamps, this.amplitudeData,
+            'Amplitude', 'Time (s)', 'Amplitude (degrees)');
+        createPlot('amplitude-rate-chart', this.amplitudeRateTimestamps, this.amplitudeRateData,
+            'Rate of Change of Amplitude', 'Time (s)', 'Amplitude Rate (degrees/s)');
+        createPlot('amplitude-period-chart', this.amplitudeData, this.periodData,
+            'Amplitude vs Period', 'Amplitude (degrees)', 'Period (s)');
 
-        createPlot('period-chart-avg', this.periodTimestamps, this.periodData, layouts.periodAvg);
-        createPlot('amplitude-chart-avg', this.amplitudeTimestamps, this.amplitudeData, layouts.amplitudeAvg);
-        createPlot('amplitude-rate-chart-avg', this.amplitudeRateTimestamps, this.amplitudeRateData, layouts.amplitudeRateAvg);
-        createPlot('amplitude-period-chart-avg', this.amplitudeData, this.periodData, layouts.amplitudePeriodAvg);
+        // Averaged measurements
+        createPlot('period-chart-avg', this.periodTimestamps, this.periodData,
+            'Period (Averaged)', 'Time (s)', 'Period (s)');
+        createPlot('amplitude-chart-avg', this.amplitudeTimestamps, this.amplitudeData,
+            'Amplitude (Averaged)', 'Time (s)', 'Amplitude (degrees)');
+        createPlot('amplitude-rate-chart-avg', this.amplitudeRateTimestamps, this.amplitudeRateData,
+            'Rate of Change of Amplitude (Averaged)', 'Time (s)', 'Amplitude Rate (degrees/s)');
+        createPlot('amplitude-period-chart-avg', this.amplitudeData, this.periodData,
+            'Amplitude vs Period (Averaged)', 'Amplitude (degrees)', 'Period (s)');
     }
 
     addReading(message) {
