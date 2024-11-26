@@ -1,5 +1,9 @@
 class DataRecorder {
     constructor() {
+        this.reset();
+    }
+
+    reset() {
         this.maxPoints = 2000;
         this.timestamps = [];
         this.counts = [];
@@ -24,6 +28,12 @@ class DataRecorder {
         this.amplitudeTimestamps = [];
         this.amplitudeRateData = [];
         this.amplitudeRateTimestamps = [];
+    }
+
+    tare() {
+        if (this.counts.length === 0) return;
+        this.tareOffset = this.counts[this.counts.length - 1];
+        this.counts = this.counts.map(count => count - this.tareOffset);
     }
 
     getCurrentPosition() {

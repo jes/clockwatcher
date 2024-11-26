@@ -55,22 +55,22 @@ class ClockWatcher {
         this.ui.onScan(() => this.serial.fetchSerialPorts());
         this.ui.onTare(() => {
             this.data.tare();
-            this.ui.updateDisplays(this.data);
-            this.plots.updateAll(this.data);
+            this.redraw();
         });
         this.ui.onReset(() => {
             this.data.reset();
-            this.ui.updateDisplays(this.data);
-            this.plots.updateAll(this.data);
+            this.redraw();
         });
 
         this.serial.fetchSerialPorts();
         
         // Start periodic plot updates
-        setInterval(() => {
-            this.plots.updateAll(this.data);
-            this.ui.updateDisplays(this.data);
-        }, 100);
+        setInterval(() => this.redraw(), 100);
+    }
+
+    redraw() {
+        this.plots.updateAll(this.data);
+        this.ui.updateDisplays(this.data);
     }
 }
 
