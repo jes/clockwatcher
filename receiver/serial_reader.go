@@ -19,7 +19,6 @@ const (
 )
 
 type Reading struct {
-	Timestamp   uint32 `json:"Timestamp"`
 	TotalMicros uint64 `json:"TotalMicros"`
 	Count       int    `json:"Count"`
 }
@@ -105,7 +104,6 @@ func (sr *SerialReader) StartReading(readings chan<- Reading) {
 
 		totalMicroseconds := uint64(timestamp) + (sr.overflowCount * 0xFFFFFFFF)
 		reading := Reading{
-			Timestamp:   timestamp,
 			TotalMicros: totalMicroseconds,
 			Count:       sr.count,
 		}

@@ -18,7 +18,7 @@ func NewCSVWriter(w io.Writer) *CSVWriter {
 
 func (cw *CSVWriter) Start(readings <-chan Reading) error {
 	// Write CSV header
-	if err := cw.writer.Write([]string{"Timestamp_us", "Total_Time_us", "Count"}); err != nil {
+	if err := cw.writer.Write([]string{"Timestamp_us", "Count"}); err != nil {
 		return fmt.Errorf("error writing CSV header: %v", err)
 	}
 
@@ -38,7 +38,6 @@ func (cw *CSVWriter) Close() {
 
 func (cw *CSVWriter) WriteReading(reading Reading) error {
 	if err := cw.writer.Write([]string{
-		fmt.Sprintf("%d", reading.Timestamp),
 		fmt.Sprintf("%d", reading.TotalMicros),
 		fmt.Sprintf("%d", reading.Count),
 	}); err != nil {
