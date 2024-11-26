@@ -27,24 +27,17 @@ class ClockWatcher {
         this.tareBtn = document.getElementById('tare-btn');
         this.resetBtn = document.getElementById('reset-btn');
         
-        // Initialize position display
         document.getElementById('current-position').textContent = '0°';
-        
-        // Initialize amplitude display
         document.getElementById('current-amplitude').textContent = '0°';
-        
-        // Initialize period displays
         document.getElementById('current-period').textContent = '0.0s';
         document.getElementById('positive-period').textContent = '0.0s';
         document.getElementById('negative-period').textContent = '0.0s';
         
-        // Add new arrays for period and amplitude data
         this.periodData = [];
         this.amplitudeData = [];
         this.periodTimestamps = [];
         this.amplitudeTimestamps = [];
         
-        // Add new arrays for amplitude rate data
         this.amplitudeRateData = [];
         this.amplitudeRateTimestamps = [];
         
@@ -52,10 +45,8 @@ class ClockWatcher {
         this.setupEventListeners();
         this.connectWebSocket();
         
-        // Add plot update interval
         setInterval(() => this.updatePlots(), 100);
         
-        // Add status tracking
         this.serialConnected = false;
         this.serialError = null;
     }
@@ -66,7 +57,6 @@ class ClockWatcher {
         this.tareBtn.addEventListener('click', () => this.handleTare());
         this.resetBtn.addEventListener('click', () => this.handleReset());
         
-        // Add listener for averaging window changes
         document.getElementById('avg-window').addEventListener('change', () => this.updatePlots());
     }
 
@@ -89,7 +79,7 @@ class ClockWatcher {
             }], layout, { responsive: true, displayModeBar: false });
         };
 
-        // Basic measurements
+        // Raw measurements
         createPlot('position-chart', this.timestamps, this.counts, 
             'Balance wheel position', 'Time (s)', 'Position (degrees)');
         createPlot('velocity-chart', this.timestamps, this.velocities,
@@ -97,7 +87,7 @@ class ClockWatcher {
         createPlot('acceleration-chart', this.timestamps, this.accelerations,
             'Balance wheel acceleration', 'Time (s)', 'Acceleration (degrees/s²)');
 
-        // Raw measurements
+        // Computed measurements
         createPlot('period-chart', this.periodTimestamps, this.periodData,
             'Period', 'Time (s)', 'Period (s)');
         createPlot('amplitude-chart', this.amplitudeTimestamps, this.amplitudeData,
@@ -134,7 +124,6 @@ class ClockWatcher {
         this.timestamps.push(timeSeconds);
         this.counts.push(degrees || 0);
         
-        // Replace detectPeaks with detectCrossingsAndPeaks
         this.detectCrossingsAndPeaks();
 
         // Calculate velocity
@@ -149,26 +138,21 @@ class ClockWatcher {
         this.trimArrays();
     }
 
-    calculateVelocity() {
-        const step = 10;  // Use 10 points of separation for finite difference
-        if (this.timestamps.length < step) return 0;
+    calculateFiniteDifference(array, step) {
+        if (array.length < step) return 0;
         
-        // Get points separated by 'step' positions
         const dt = this.timestamps[this.timestamps.length - 1] - this.timestamps[this.timestamps.length - step];
-        const dp = this.counts[this.counts.length - 1] - this.counts[this.counts.length - step];
+        const dy = array[array.length - 1] - array[array.length - step];
         
-        return dp / dt; // degrees per second
+        return dy / dt;
+    }
+
+    calculateVelocity() {
+        return this.calculateFiniteDifference(this.counts, 10); // degrees per second
     }
 
     calculateAcceleration() {
-        const step = 10;  // Use 10 points of separation for finite difference
-        if (this.velocities.length < step) return 0;
-        
-        // Get velocity points separated by 'step' positions
-        const dt = this.timestamps[this.timestamps.length - 1] - this.timestamps[this.timestamps.length - step];
-        const dv = this.velocities[this.velocities.length - 1] - this.velocities[this.velocities.length - step];
-        
-        return dv / dt; // degrees per second²
+        return this.calculateFiniteDifference(this.velocities, 10); // degrees per second²
     }
 
     trimArray(array) {
@@ -580,12 +564,10 @@ class ClockWatcher {
     }
 }
 
-// Add this function to get the averaging window size
 function getAveragingWindow() {
     const windowInput = document.getElementById('avg-window');
     const value = parseInt(windowInput.value);
     return isNaN(value) || value < 1 ? 1 : value;
 }
 
-// Initialize the application
 const app = new ClockWatcher();
