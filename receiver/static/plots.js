@@ -93,13 +93,13 @@ class Plots {
         if (window <= 1) return array;
         
         const result = [];
-        for (let i = 0; i < array.length; i++) {
-            let start = Math.max(0, i - window + 1);
+        // Skip the first (window-1) points
+        for (let i = window - 1; i < array.length; i++) {
             let sum = 0;
-            for (let j = start; j <= i; j++) {
+            for (let j = i - window + 1; j <= i; j++) {
                 sum += array[j];
             }
-            result.push(sum / (i - start + 1));
+            result.push(sum / window);
         }
         return result;
     }
