@@ -74,12 +74,12 @@ class UI {
     updateDisplays(data) {
         const displays = this.elements.displays;
         displays.currentPosition.textContent = `${data.getCurrentPosition().toFixed(0)}°`;
-        displays.currentAmplitude.textContent = `${data.getCurrentAmplitude().toFixed(0)}°`;
+        displays.currentAmplitude.textContent = `${data.getCurrentAmplitude().toFixed(2)}°`;
         displays.currentPeriod.textContent = `${data.getCurrentPeriod().toFixed(6)}s`;
         displays.positivePeriod.textContent = `${data.getPositiveHalfperiod().toFixed(6)}s`;
         displays.negativePeriod.textContent = `${data.getNegativeHalfperiod().toFixed(6)}s`;
-        displays.positivePeak.textContent = `+${data.getPositiveAmplitude().toFixed(0)}°`;
-        displays.negativePeak.textContent = `${data.getNegativeAmplitude().toFixed(0)}°`;
+        displays.positivePeak.textContent = `+${data.getPositiveAmplitude().toFixed(2)}°`;
+        displays.negativePeak.textContent = `${data.getNegativeAmplitude().toFixed(2)}°`;
     }
     
     updateSerialPorts(ports) {
