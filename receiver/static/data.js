@@ -32,8 +32,9 @@ class DataRecorder {
 
     tare() {
         if (this.counts.length === 0) return;
-        this.tareOffset = this.counts[this.counts.length - 1];
-        this.counts = this.counts.map(count => count - this.tareOffset);
+        const sub = this.counts[this.counts.length - 1];
+        this.counts = this.counts.map(count => count - sub);
+        this.tareOffset += sub;
     }
 
     getCurrentPosition() {
