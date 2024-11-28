@@ -159,17 +159,40 @@ class DataRecorder {
         const middlePoint = this.counts[n - 2];
         const prevPoint = this.counts[n - 3];
         const currentPoint = this.counts[n - 1];
+        const middleTime = this.timestamps[n - 2];
+        const prevTime = this.timestamps[n - 3];
+        const currentTime = this.timestamps[n - 1];
         
         let amplitudeUpdated = false;
 
         // Detect positive peak
         if (middlePoint > prevPoint && middlePoint > currentPoint) {
-            this.lastPositivePeak = middlePoint;
+            // For positive peak, add 2 degrees to currentPoint because we were likely
+            // exactly at the higher quantization level when we started dropping
+            const interpolated = this.interpolatePeak(
+                prevPoint, 
+                middlePoint, 
+                currentPoint + 2, 
+                prevTime, 
+                middleTime, 
+                currentTime,
+            );
+            this.lastPositivePeak = interpolated ? interpolated.position : middlePoint;
             amplitudeUpdated = true;
         }
         // Detect negative peak
         else if (middlePoint < prevPoint && middlePoint < currentPoint) {
-            this.lastNegativePeak = middlePoint;
+            // For negative peak, add 2 degrees to prevPoint and middlePoint because
+            // they were likely exactly at the lower quantization level
+            const interpolated = this.interpolatePeak(
+                prevPoint + 2, 
+                middlePoint + 2, 
+                currentPoint, 
+                prevTime, 
+                middleTime, 
+                currentTime,
+            );
+            this.lastNegativePeak = interpolated ? interpolated.position : middlePoint;
             amplitudeUpdated = true;
         }
 
@@ -194,6 +217,37 @@ class DataRecorder {
                 this.amplitudeTimestamps.push(currentTime);
             }
         }
+    }
+
+    interpolatePeak(p1, p2, p3, t1, t2, t3) {
+        // Convert time points to relative coordinates to improve numerical stability
+        const t0 = t2;  // Use middle point as reference
+        const x1 = t1 - t0;
+        const x2 = 0;   // t2 - t0 = 0
+        const x3 = t3 - t0;
+
+        // Solve quadratic equation y = ax² + bx + c
+        const denom = (x1 - x2) * (x1 - x3) * (x2 - x3);
+        const a = (x3 * (p2 - p1) + x2 * (p1 - p3) + x1 * (p3 - p2)) / denom;
+        const b = (x3*x3 * (p1 - p2) + x2*x2 * (p3 - p1) + x1*x1 * (p2 - p3)) / denom;
+        
+        // Peak occurs at x = -b/(2a)
+        const xPeak = -b / (2 * a);
+        
+        // Convert back to absolute time
+        const tPeak = xPeak + t0;
+        
+        // Calculate peak position using quadratic formula
+        const pPeak = a * xPeak * xPeak + b * xPeak + p2;
+        
+        // Only return result if peak is within the time interval AND
+        // if the interpolated peak is within 4 units of the middle value
+        if (tPeak >= t1 && tPeak <= t3 && Math.abs(pPeak - p2) <= 4) {
+            return { time: tPeak, position: pPeak };
+        }
+        
+        // Return null if peak is outside the interval or too far from middle value
+        return null;
     }
 
     trimArrays() {
