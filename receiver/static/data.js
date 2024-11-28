@@ -166,7 +166,7 @@ class DataRecorder {
         let amplitudeUpdated = false;
 
         // Detect positive peak
-        if (middlePoint > prevPoint && middlePoint > currentPoint) {
+        if (middlePoint > prevPoint && middlePoint > currentPoint && middlePoint > 0) {
             // For positive peak, add 2 degrees to currentPoint because we were likely
             // exactly at the higher quantization level when we started dropping
             const interpolated = this.interpolatePeak(
@@ -181,7 +181,7 @@ class DataRecorder {
             amplitudeUpdated = true;
         }
         // Detect negative peak
-        else if (middlePoint < prevPoint && middlePoint < currentPoint) {
+        else if (middlePoint < prevPoint && middlePoint < currentPoint && middlePoint < 0) {
             // For negative peak, add 2 degrees to prevPoint and middlePoint because
             // they were likely exactly at the lower quantization level
             const interpolated = this.interpolatePeak(
