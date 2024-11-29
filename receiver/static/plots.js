@@ -30,6 +30,8 @@ class Plots {
         // Raw measurements
         createPlot('position-chart', [], [], 
             'Balance wheel position', 'Time (s)', 'Position (degrees)');
+        createPlot('position-velocity-chart', [], [],
+            'Position vs Velocity', 'Position (degrees)', 'Velocity (degrees/s)');
         createPlot('velocity-chart', [], [],
             'Balance wheel velocity', 'Time (s)', 'Velocity (degrees/s)');
         createPlot('acceleration-chart', [], [],
@@ -77,6 +79,7 @@ class Plots {
             { id: 'amplitude-chart-avg', y: avgAmplitude, x: data.amplitudeTimestamps },
             { id: 'amplitude-rate-chart-avg', y: avgAmplitudeRate, x: data.amplitudeRateTimestamps },
             { id: 'amplitude-period-chart-avg', y: avgPeriod, x: avgAmplitude },
+            { id: 'position-velocity-chart', y: smoothedVelocities, x: data.counts },
         ];
 
         updates.forEach(({ id, x, y }) => {

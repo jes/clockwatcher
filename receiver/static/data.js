@@ -6,7 +6,7 @@ class DataRecorder {
     }
 
     reset() {
-        this.maxPoints = 2000;
+        this.maxPoints = 10000;
         this.timestamps = [];
         this.counts = [];
         this.velocities = [];
