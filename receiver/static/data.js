@@ -124,10 +124,30 @@ class DataRecorder {
     }
 
     updatePeriod() {
-        if (this.lastPositiveHalfperiod !== null && this.lastNegativeHalfperiod !== null) {
-            this.periodData.push(this.lastPositiveHalfperiod + this.lastNegativeHalfperiod);
-            this.periodTimestamps.push(this.timestamps[this.timestamps.length - 1]);
+        if (this.lastPositiveHalfperiod == null || this.lastNegativeHalfperiod == null
+            || this.lastPositivePeak == null || this.lastNegativePeak == null) {
+            return;
         }
+
+        const period = this.lastPositiveHalfperiod + this.lastNegativeHalfperiod;
+        const amplitude = this.lastPositivePeak - this.lastNegativePeak;
+        const currentTime = this.timestamps[this.timestamps.length - 1];
+        
+        this.periodData.push(period);
+        this.periodTimestamps.push(currentTime);
+        
+        // Calculate rate of change of amplitude
+        if (this.amplitudeData.length > 1) {
+            const deltaAmplitude = amplitude - this.amplitudeData[this.amplitudeData.length - 1];
+            const deltaTime = currentTime - this.amplitudeTimestamps[this.amplitudeTimestamps.length - 1];
+            const amplitudeRate = deltaAmplitude / deltaTime;
+            
+            this.amplitudeRateData.push(amplitudeRate);
+            this.amplitudeRateTimestamps.push(currentTime);
+        }
+
+        this.amplitudeData.push(amplitude);
+        this.amplitudeTimestamps.push(currentTime);
     }
 
     detectZeroCrossings(current, prev, currentTime) {
@@ -194,28 +214,6 @@ class DataRecorder {
             );
             this.lastNegativePeak = interpolated ? interpolated.position : middlePoint;
             amplitudeUpdated = true;
-        }
-
-        // Update amplitude data when we have both peaks and a new peak was detected
-        if (this.lastPositivePeak !== null && this.lastNegativePeak !== null && amplitudeUpdated) {
-            const amplitude = this.lastPositivePeak - this.lastNegativePeak;
-            
-            if (Math.abs(amplitude) > 10) {
-                const currentTime = this.timestamps[n - 1];
-                
-                // Calculate rate of change of amplitude
-                if (this.amplitudeData.length > 1) {
-                    const deltaAmplitude = amplitude - this.amplitudeData[this.amplitudeData.length - 1];
-                    const deltaTime = currentTime - this.amplitudeTimestamps[this.amplitudeTimestamps.length - 1];
-                    const amplitudeRate = deltaAmplitude / deltaTime;
-                    
-                    this.amplitudeRateData.push(amplitudeRate);
-                    this.amplitudeRateTimestamps.push(currentTime);
-                }
-
-                this.amplitudeData.push(amplitude);
-                this.amplitudeTimestamps.push(currentTime);
-            }
         }
     }
 
