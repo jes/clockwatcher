@@ -1,5 +1,7 @@
 class DataRecorder {
     constructor() {
+        this.tareOffset = 0;
+        this.timeOffset = 0;
         this.reset();
     }
 
@@ -9,8 +11,6 @@ class DataRecorder {
         this.counts = [];
         this.velocities = [];
         this.accelerations = [];
-        this.tareOffset = 0;
-        this.timeOffset = 0;
         this.smoothingWindow = 20;
         
         // Peak and crossing detection
