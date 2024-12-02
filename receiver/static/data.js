@@ -1,13 +1,13 @@
 class DataRecorder {
     constructor() {
         this.tareOffset = 0;
-        this.timeOffset = 0;
         this.reset();
     }
 
     reset() {
         this.maxPoints = 10000;
         this.timestamps = [];
+        this.timeOffset = null;
         this.counts = [];
         this.velocities = [];
         this.accelerations = [];
@@ -78,8 +78,9 @@ class DataRecorder {
     }
 
     addReading(message) {
-        if (this.timestamps.length === 0 && message.TotalMicros !== undefined) {
+        if (this.timeOffset == null) {
             this.timeOffset = message.TotalMicros / 1000000;
+            console.log("Time offset:", this.timeOffset);
         }
 
         const timeSeconds = (message.TotalMicros / 1000000) - this.timeOffset;
@@ -103,6 +104,27 @@ class DataRecorder {
             velocity: currentVelocity,
             acceleration: acceleration
         };
+    }
+
+    addBMP180Reading(message) {
+        if (message.type !== 'BMP180') return;
+        
+        if (this.timeOffset == null) {
+            this.timeOffset = message.timestamp / 1000000;
+            console.log("bmp Time offset:", this.timeOffset);
+        }
+        const timeSeconds = (message.timestamp / 1000000) - this.timeOffset;
+
+        this.temperatures.push(message.temperature);
+        this.pressures.push(message.pressure);
+        this.environmentalTimestamps.push(timeSeconds);
+
+        // Keep arrays at maxPoints length
+        if (this.temperatures.length > this.maxPoints) {
+            this.temperatures = this.temperatures.slice(-this.maxPoints);
+            this.pressures = this.pressures.slice(-this.maxPoints);
+            this.environmentalTimestamps = this.environmentalTimestamps.slice(-this.maxPoints);
+        }
     }
 
     calculateFiniteDifference(array, step) {
@@ -271,25 +293,5 @@ class DataRecorder {
         this.amplitudeRateTimestamps = this.amplitudeRateTimestamps.slice(-this.maxPoints);
         this.periodData = this.periodData.slice(-this.maxPoints);
         this.periodTimestamps = this.periodTimestamps.slice(-this.maxPoints);
-    }
-
-    addBMP180Reading(message) {
-        if (message.type !== 'BMP180') return;
-        
-        const timeSeconds = message.timestamp / 1000000;
-        if (this.environmentalTimestamps.length === 0) {
-            this.environmentalTimeOffset = timeSeconds;
-        }
-
-        this.temperatures.push(message.temperature);
-        this.pressures.push(message.pressure);
-        this.environmentalTimestamps.push(timeSeconds - this.environmentalTimeOffset);
-
-        // Keep arrays at maxPoints length
-        if (this.temperatures.length > this.maxPoints) {
-            this.temperatures = this.temperatures.slice(-this.maxPoints);
-            this.pressures = this.pressures.slice(-this.maxPoints);
-            this.environmentalTimestamps = this.environmentalTimestamps.slice(-this.maxPoints);
-        }
     }
 }

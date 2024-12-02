@@ -112,6 +112,8 @@ class Plots {
             { id: 'amplitude-rate-chart-avg', y: this.avgAmplitudeRate, x: data.amplitudeRateTimestamps },
             { id: 'amplitude-period-chart-avg', y: this.avgPeriod, x: this.avgAmplitude },
             { id: 'position-velocity-chart', y: this.avgVelocities, x: data.counts },
+            { id: 'temperature-chart', y: data.temperatures, x: data.environmentalTimestamps },
+            { id: 'pressure-chart', y: data.pressures, x: data.environmentalTimestamps },
         ];
 
         updates.forEach(({ id, x, y }) => {
@@ -177,6 +179,12 @@ class Plots {
             'Rate of Change of Amplitude (Averaged)', 'Time (s)', 'Amplitude Rate (degrees/s)');
         createPlot('amplitude-period-chart-avg', [], [],
             'Amplitude vs Period (Averaged)', 'Amplitude (degrees)', 'Period (s)', 'markers');
+
+        // Environmental measurements
+        createPlot('temperature-chart', [], [],
+            'Temperature', 'Time (s)', 'Temperature (°C)');
+        createPlot('pressure-chart', [], [],
+            'Pressure', 'Time (s)', 'Pressure (hPa)');
     }
 
     movingAverage(array, window) {

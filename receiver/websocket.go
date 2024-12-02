@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/http"
 	"sync"
-	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -67,22 +66,6 @@ func (s *WebSocketServer) handleConnections(w http.ResponseWriter, r *http.Reque
 		message, err := json.Marshal(status)
 		if err == nil {
 			ws.WriteMessage(websocket.TextMessage, message)
-		}
-
-		// Send latest BMP180 reading if available
-		if s.server.bmp != nil {
-			temp, pressure, err := s.server.bmp.ReadTemperaturePressure()
-			if err == nil {
-				reading := BMP180Reading{
-					Type:        "BMP180",
-					Temperature: temp,
-					Pressure:    pressure,
-					Timestamp:   time.Now().Unix(),
-				}
-				if message, err := json.Marshal(reading); err == nil {
-					ws.WriteMessage(websocket.TextMessage, message)
-				}
-			}
 		}
 	}
 
