@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"time"
 
 	"go.bug.st/serial"
 )
@@ -38,6 +39,8 @@ type SerialReader struct {
 	consecutiveErrors int
 	statusChan        chan StatusMessage
 	done              chan struct{}
+	timeOffset        int64    // Unix epoch microseconds when first reading received
+	firstTimestamp    uint64   // First device timestamp in microseconds
 }
 
 func NewSerialReader(port serial.Port, statusChan chan StatusMessage) *SerialReader {
@@ -83,6 +86,12 @@ func (sr *SerialReader) StartReading(readings chan<- Reading) {
 			continue
 		}
 
+		// Initialize time offset on first reading
+		if sr.timeOffset == 0 {
+			sr.timeOffset = time.Now().UnixMicro()
+			sr.firstTimestamp = uint64(timestamp)
+		}
+
 		// Handle timestamp overflow
 		if timestamp < sr.lastTimestamp {
 			sr.overflowCount++
@@ -95,6 +104,12 @@ func (sr *SerialReader) StartReading(readings chan<- Reading) {
 		}
 		sr.lastTimestamp = timestamp
 
+		// Calculate device microseconds since first reading
+		deviceMicros := uint64(timestamp) + (sr.overflowCount * 0xFFFFFFFF) - sr.firstTimestamp
+
+		// Calculate actual Unix epoch microseconds
+		totalMicros := sr.timeOffset + int64(deviceMicros)
+
 		// Update count based on direction
 		if direction == 1 {
 			sr.count++
@@ -102,9 +117,8 @@ func (sr *SerialReader) StartReading(readings chan<- Reading) {
 			sr.count--
 		}
 
-		totalMicroseconds := uint64(timestamp) + (sr.overflowCount * 0xFFFFFFFF)
 		reading := Reading{
-			TotalMicros: totalMicroseconds,
+			TotalMicros: uint64(totalMicros),
 			Count:       sr.count,
 		}
 

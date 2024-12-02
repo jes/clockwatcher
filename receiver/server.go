@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"sync"
+	"time"
 
 	"go.bug.st/serial"
 )
@@ -16,16 +17,34 @@ type Server struct {
 	serialPort serial.Port
 	serialMux  sync.Mutex
 	tareOffset int
+	bmp        *BMP180
+	bmpReadings chan BMP180Reading
+}
+
+type BMP180Reading struct {
+    Type        string  `json:"type"`
+    Temperature float64 `json:"temperature"`
+    Pressure    float64 `json:"pressure"`
+    Timestamp   int64   `json:"timestamp"`
 }
 
 func NewServer() *Server {
 	s := &Server{
-		readings:   make(chan Reading),
-		statusChan: make(chan StatusMessage),
+		readings:     make(chan Reading),
+		statusChan:   make(chan StatusMessage),
+		bmpReadings:  make(chan BMP180Reading),
 	}
 	ws := NewWebSocketServer()
 	ws.server = s
 	s.wsServer = ws
+
+	bmp, err := NewBMP180()
+	if err != nil {
+		log.Printf("Failed to initialize BMP180: %v", err)
+	} else {
+		s.bmp = bmp
+	}
+
 	return s
 }
 
@@ -38,6 +57,11 @@ func (s *Server) Start() {
 
 	go s.broadcastMessages()
 
+	// Start BMP180 monitoring if available
+	if s.bmp != nil {
+		go s.monitorBMP180()
+	}
+
 	// Block main goroutine
 	select {}
 }
@@ -49,6 +73,8 @@ func (s *Server) broadcastMessages() {
 			s.wsServer.Broadcast(reading)
 		case status := <-s.statusChan:
 			s.wsServer.Broadcast(status)
+		case bmpReading := <-s.bmpReadings:
+			s.wsServer.Broadcast(bmpReading)
 		}
 	}
 }
@@ -142,4 +168,26 @@ func (s *Server) handleTare(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
+}
+
+func (s *Server) monitorBMP180() {
+    ticker := time.NewTicker(2 * time.Second)
+    defer ticker.Stop()
+
+    for range ticker.C {
+        temp, pressure, err := s.bmp.ReadTemperaturePressure()
+        if err != nil {
+            log.Printf("Error reading BMP180: %v", err)
+            continue
+        }
+
+        reading := BMP180Reading{
+            Type:        "BMP180",
+            Temperature: temp,
+            Pressure:    pressure,
+            Timestamp:   time.Now().UnixMicro(),
+        }
+
+        s.bmpReadings <- reading
+    }
 }
