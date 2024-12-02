@@ -1,6 +1,127 @@
 class Plots {
     constructor() {
         this.initializePlots();
+        this.reset();
+        this.lastAvgWindow = null;
+    }
+
+    reset() {
+        // Store the averaged arrays
+        this.avgVelocities = [];
+        this.avgAccelerations = [];
+        this.avgAmplitude = [];
+        this.avgPeriod = [];
+        this.avgAmplitudeRate = [];
+        this.lastAvgWindow = null;
+        
+        // Store previous lengths to detect resets
+        this.prevLengths = {
+            velocities: 0,
+            accelerations: 0,
+            amplitudeData: 0,
+            periodData: 0,
+            amplitudeRateData: 0
+        };
+    }
+
+    updateMovingAverage(array, prevArray, window, prevLength) {
+        if (array.length < prevLength) {
+            // Data was reset, recalculate entire array
+            return this.movingAverage(array, window);
+        }
+        
+        // Only calculate new points
+        for (let i = prevLength; i < array.length; i++) {
+            if (i < window - 1) continue;
+            
+            let sum = 0;
+            for (let j = i - window + 1; j <= i; j++) {
+                sum += array[j];
+            }
+            prevArray.push(sum / window);
+        }
+        
+        return prevArray;
+    }
+
+    updateAll(data) {
+        // Update moving averages incrementally
+        this.avgVelocities = this.updateMovingAverage(
+            data.velocities, 
+            this.avgVelocities, 
+            data.smoothingWindow, 
+            this.prevLengths.velocities
+        );
+        
+        this.avgAccelerations = this.updateMovingAverage(
+            data.accelerations, 
+            this.avgAccelerations, 
+            data.smoothingWindow, 
+            this.prevLengths.accelerations
+        );
+
+        const avgWindow = document.getElementById('avg-window').value;
+        // If window size changed, force recalculation
+        if (avgWindow !== this.lastAvgWindow) {
+            this.avgAmplitude = this.movingAverage(data.amplitudeData, avgWindow);
+            this.avgPeriod = this.movingAverage(data.periodData, avgWindow);
+            this.avgAmplitudeRate = this.movingAverage(data.amplitudeRateData, avgWindow);
+            this.lastAvgWindow = avgWindow;
+        } else {
+            this.avgAmplitude = this.updateMovingAverage(
+                data.amplitudeData, 
+                this.avgAmplitude, 
+                avgWindow, 
+                this.prevLengths.amplitudeData
+            );
+            
+            this.avgPeriod = this.updateMovingAverage(
+                data.periodData, 
+                this.avgPeriod, 
+                avgWindow, 
+                this.prevLengths.periodData
+            );
+            
+            this.avgAmplitudeRate = this.updateMovingAverage(
+                data.amplitudeRateData, 
+                this.avgAmplitudeRate, 
+                avgWindow, 
+                this.prevLengths.amplitudeRateData
+            );
+        }
+
+        // Update previous lengths
+        this.prevLengths = {
+            velocities: data.velocities.length,
+            accelerations: data.accelerations.length,
+            amplitudeData: data.amplitudeData.length,
+            periodData: data.periodData.length,
+            amplitudeRateData: data.amplitudeRateData.length
+        };
+
+        const updates = [
+            { id: 'position-chart', y: data.counts, x: data.timestamps },
+            { id: 'velocity-chart', y: this.avgVelocities, x: data.timestamps },
+            { id: 'acceleration-chart', y: this.avgAccelerations, x: data.timestamps },
+            { id: 'period-chart', y: data.periodData, x: data.periodTimestamps },
+            { id: 'amplitude-chart', y: data.amplitudeData, x: data.amplitudeTimestamps },
+            { id: 'amplitude-rate-chart', y: data.amplitudeRateData, x: data.amplitudeRateTimestamps },
+            { id: 'amplitude-period-chart', y: data.periodData, x: data.amplitudeData },
+            { id: 'period-chart-avg', y: this.avgPeriod, x: data.periodTimestamps },
+            { id: 'amplitude-chart-avg', y: this.avgAmplitude, x: data.amplitudeTimestamps },
+            { id: 'amplitude-rate-chart-avg', y: this.avgAmplitudeRate, x: data.amplitudeRateTimestamps },
+            { id: 'amplitude-period-chart-avg', y: this.avgPeriod, x: this.avgAmplitude },
+            { id: 'position-velocity-chart', y: this.avgVelocities, x: data.counts },
+        ];
+
+        updates.forEach(({ id, x, y }) => {
+            Plotly.update(id, {
+                x: [x],
+                y: [y]
+            }).catch(error => {
+                console.error(`Error updating ${id}:`, error);
+            });
+        });
     }
 
     initializePlots() {
@@ -56,40 +177,6 @@ class Plots {
             'Rate of Change of Amplitude (Averaged)', 'Time (s)', 'Amplitude Rate (degrees/s)');
         createPlot('amplitude-period-chart-avg', [], [],
             'Amplitude vs Period (Averaged)', 'Amplitude (degrees)', 'Period (s)', 'markers');
-    }
-
-    updateAll(data) {
-        const smoothedVelocities = this.movingAverage(data.velocities, data.smoothingWindow);
-        const smoothedAccelerations = this.movingAverage(data.accelerations, data.smoothingWindow);
-
-        const avgWindow = document.getElementById('avg-window').value;
-        const avgAmplitude = this.movingAverage(data.amplitudeData, avgWindow);
-        const avgPeriod = this.movingAverage(data.periodData, avgWindow);
-        const avgAmplitudeRate = this.movingAverage(data.amplitudeRateData, avgWindow);
-
-        const updates = [
-            { id: 'position-chart', y: data.counts, x: data.timestamps },
-            { id: 'velocity-chart', y: smoothedVelocities, x: data.timestamps },
-            { id: 'acceleration-chart', y: smoothedAccelerations, x: data.timestamps },
-            { id: 'period-chart', y: data.periodData, x: data.periodTimestamps },
-            { id: 'amplitude-chart', y: data.amplitudeData, x: data.amplitudeTimestamps },
-            { id: 'amplitude-rate-chart', y: data.amplitudeRateData, x: data.amplitudeRateTimestamps },
-            { id: 'amplitude-period-chart', y: data.periodData, x: data.amplitudeData },
-            { id: 'period-chart-avg', y: avgPeriod, x: data.periodTimestamps },
-            { id: 'amplitude-chart-avg', y: avgAmplitude, x: data.amplitudeTimestamps },
-            { id: 'amplitude-rate-chart-avg', y: avgAmplitudeRate, x: data.amplitudeRateTimestamps },
-            { id: 'amplitude-period-chart-avg', y: avgPeriod, x: avgAmplitude },
-            { id: 'position-velocity-chart', y: smoothedVelocities, x: data.counts },
-        ];
-
-        updates.forEach(({ id, x, y }) => {
-            Plotly.update(id, {
-                x: [x],
-                y: [y]
-            }).catch(error => {
-                console.error(`Error updating ${id}:`, error);
-            });
-        });
     }
 
     movingAverage(array, window) {

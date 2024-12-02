@@ -86,4 +86,35 @@ class SerialManager {
     getError() {
         return this.error;
     }
+    
+    async setTare(value) {
+        try {
+            const response = await fetch('/tare', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ value }),
+            });
+            if (!response.ok) {
+                throw new Error('Failed to set tare');
+            }
+        } catch (error) {
+            console.error('Error setting tare:', error);
+        }
+    }
+    
+    async getTare() {
+        try {
+            const response = await fetch('/tare');
+            if (!response.ok) {
+                throw new Error('Failed to get tare');
+            }
+            const data = await response.json();
+            return data.value;
+        } catch (error) {
+            console.error('Error getting tare:', error);
+            return 0;
+        }
+    }
 } 

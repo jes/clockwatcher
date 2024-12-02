@@ -15,6 +15,7 @@ type Server struct {
 	statusChan chan StatusMessage
 	serialPort serial.Port
 	serialMux  sync.Mutex
+	tareOffset int
 }
 
 func NewServer() *Server {
@@ -33,6 +34,7 @@ func (s *Server) Start() {
 
 	http.HandleFunc("/serial_ports", s.handleListSerialPorts)
 	http.HandleFunc("/connect", s.handleConnectSerialPort)
+	http.HandleFunc("/tare", s.handleTare)
 
 	go s.broadcastMessages()
 
@@ -116,6 +118,29 @@ func (s *Server) getCurrentSerialStatus() StatusMessage {
 	return StatusMessage{
 		Device: DeviceTypeSerial,
 		Status: StatusConnected,
+	}
+}
+
+func (s *Server) handleTare(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		json.NewEncoder(w).Encode(map[string]int{
+			"value": s.tareOffset,
+		})
+
+	case http.MethodPost:
+		var req struct {
+			Value int `json:"value"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+		s.tareOffset = req.Value
+		w.WriteHeader(http.StatusOK)
+
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 

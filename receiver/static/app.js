@@ -9,7 +9,11 @@ class ClockWatcher {
         this.initializeApp();
     }
 
-    initializeApp() {
+    async initializeApp() {
+        // Load initial tare value
+        const initialTare = await this.serial.getTare();
+        this.data.tareOffset = initialTare;
+
         // Setup WebSocket status handling
         this.ws.onStatus((status, ...args) => {
             switch (status) {
@@ -53,12 +57,15 @@ class ClockWatcher {
         // Setup UI event handlers
         this.ui.onConnect(() => this.serial.connect(this.ui.getPortSelection()));
         this.ui.onScan(() => this.serial.fetchSerialPorts());
-        this.ui.onTare(() => {
+        this.ui.onTare(async () => {
+            const currentValue = this.data.getCurrentPosition();
             this.data.tare();
+            await this.serial.setTare(this.data.tareOffset);
             this.redraw();
         });
         this.ui.onReset(() => {
             this.data.reset();
+            this.plots.reset();
             this.redraw();
         });
 
