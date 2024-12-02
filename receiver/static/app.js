@@ -51,6 +51,8 @@ class ClockWatcher {
                 this.serial.handleStatus(message);
             } else if (message.TotalMicros !== undefined) {
                 this.data.addReading(message);
+            } else if (message.type === 'BMP180') {
+                this.data.addBMP180Reading(message);
             }
         });
         

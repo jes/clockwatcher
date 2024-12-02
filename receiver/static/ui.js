@@ -22,7 +22,9 @@ class UI {
                 positivePeriod: document.getElementById('positive-period'),
                 negativePeriod: document.getElementById('negative-period'),
                 positivePeak: document.getElementById('positive-peak'),
-                negativePeak: document.getElementById('negative-peak')
+                negativePeak: document.getElementById('negative-peak'),
+                currentTemperature: document.getElementById('current-temperature'),
+                currentPressure: document.getElementById('current-pressure')
             }
         };
     }
@@ -80,6 +82,8 @@ class UI {
         displays.negativePeriod.textContent = `${data.getNegativeHalfperiod().toFixed(6)}s`;
         displays.positivePeak.textContent = `+${data.getPositiveAmplitude().toFixed(2)}°`;
         displays.negativePeak.textContent = `${data.getNegativeAmplitude().toFixed(2)}°`;
+        displays.currentTemperature.textContent = `${data.getCurrentTemperature().toFixed(2)} °C`;
+        displays.currentPressure.textContent = `${data.getCurrentPressure().toFixed(2)} hPa`;
     }
     
     updateSerialPorts(ports) {

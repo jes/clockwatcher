@@ -28,6 +28,10 @@ class DataRecorder {
         this.amplitudeTimestamps = [];
         this.amplitudeRateData = [];
         this.amplitudeRateTimestamps = [];
+        
+        this.temperatures = [];
+        this.pressures = [];
+        this.environmentalTimestamps = [];
     }
 
     tare() {
@@ -63,6 +67,14 @@ class DataRecorder {
     }
     getNegativeAmplitude() {
         return this.lastNegativePeak || 0;
+    }
+
+    getCurrentTemperature() {
+        return this.temperatures[this.temperatures.length - 1] || 0;
+    }
+
+    getCurrentPressure() {
+        return this.pressures[this.pressures.length - 1] || 0;
     }
 
     addReading(message) {
@@ -259,5 +271,25 @@ class DataRecorder {
         this.amplitudeRateTimestamps = this.amplitudeRateTimestamps.slice(-this.maxPoints);
         this.periodData = this.periodData.slice(-this.maxPoints);
         this.periodTimestamps = this.periodTimestamps.slice(-this.maxPoints);
+    }
+
+    addBMP180Reading(message) {
+        if (message.type !== 'BMP180') return;
+        
+        const timeSeconds = message.timestamp / 1000000;
+        if (this.environmentalTimestamps.length === 0) {
+            this.environmentalTimeOffset = timeSeconds;
+        }
+
+        this.temperatures.push(message.temperature);
+        this.pressures.push(message.pressure);
+        this.environmentalTimestamps.push(timeSeconds - this.environmentalTimeOffset);
+
+        // Keep arrays at maxPoints length
+        if (this.temperatures.length > this.maxPoints) {
+            this.temperatures = this.temperatures.slice(-this.maxPoints);
+            this.pressures = this.pressures.slice(-this.maxPoints);
+            this.environmentalTimestamps = this.environmentalTimestamps.slice(-this.maxPoints);
+        }
     }
 }
