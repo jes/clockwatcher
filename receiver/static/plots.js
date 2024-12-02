@@ -60,7 +60,12 @@ class Plots {
             this.prevLengths.accelerations
         );
 
-        const avgWindow = document.getElementById('avg-window').value;
+        let avgWindow = document.getElementById('avg-window').value;
+        const isAveragingEnabled = document.getElementById('avg-enabled').checked;
+        if (!isAveragingEnabled) {
+            avgWindow = 1;
+        }
+
         // If window size changed, force recalculation
         if (avgWindow !== this.lastAvgWindow) {
             this.avgAmplitude = this.movingAverage(data.amplitudeData, avgWindow);
@@ -103,10 +108,6 @@ class Plots {
             { id: 'position-chart', y: data.counts, x: data.timestamps },
             { id: 'velocity-chart', y: this.avgVelocities, x: data.timestamps },
             { id: 'acceleration-chart', y: this.avgAccelerations, x: data.timestamps },
-            { id: 'period-chart', y: data.periodData, x: data.periodTimestamps },
-            { id: 'amplitude-chart', y: data.amplitudeData, x: data.amplitudeTimestamps },
-            { id: 'amplitude-rate-chart', y: data.amplitudeRateData, x: data.amplitudeRateTimestamps },
-            { id: 'amplitude-period-chart', y: data.periodData, x: data.amplitudeData },
             { id: 'period-chart-avg', y: this.avgPeriod, x: data.periodTimestamps },
             { id: 'amplitude-chart-avg', y: this.avgAmplitude, x: data.amplitudeTimestamps },
             { id: 'amplitude-rate-chart-avg', y: this.avgAmplitudeRate, x: data.amplitudeRateTimestamps },
@@ -159,16 +160,6 @@ class Plots {
             'Balance wheel velocity', 'Time (s)', 'Velocity (degrees/s)');
         createPlot('acceleration-chart', [], [],
             'Balance wheel acceleration', 'Time (s)', 'Acceleration (degrees/s²)');
-
-        // Computed measurements
-        createPlot('period-chart', [], [],
-            'Period', 'Time (s)', 'Period (s)');
-        createPlot('amplitude-chart', [], [],
-            'Amplitude', 'Time (s)', 'Amplitude (degrees)');
-        createPlot('amplitude-rate-chart', [], [],
-            'Rate of Change of Amplitude', 'Time (s)', 'Amplitude Rate (degrees/s)');
-        createPlot('amplitude-period-chart', [], [],
-            'Amplitude vs Period', 'Amplitude (degrees)', 'Period (s)', 'markers');
 
         // Averaged measurements
         createPlot('period-chart-avg', [], [],

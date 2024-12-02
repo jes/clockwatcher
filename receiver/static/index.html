@@ -69,17 +69,11 @@
         </div>
     </div>
     <div class="chart-group">
-        <h2>Computed</h2>
-        <div class="chart-grid">
-            <div id="amplitude-chart" class="chart"></div>
-            <div id="period-chart" class="chart"></div>
-            <div id="amplitude-rate-chart" class="chart"></div>
-            <div id="amplitude-period-chart" class="chart"></div>
+        <h2>Analysis</h2>
+        <div class="averaging-controls">
+            Moving average over <input type="number" id="avg-window" value="10"> samples
+            <label><input type="checkbox" id="avg-enabled" checked> Enable averaging</label>
         </div>
-    </div>
-    <div class="chart-group">
-        <h2>Averaged</h2>
-        Moving average over <input type="number" id="avg-window" value="10"> samples
         <div class="chart-grid">
             <div id="amplitude-chart-avg" class="chart"></div>
             <div id="period-chart-avg" class="chart"></div>
