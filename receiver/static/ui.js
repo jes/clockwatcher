@@ -6,7 +6,7 @@ class UI {
     }
     
     initializeElements() {
-        return {
+        const elements = {
             serialStatus: document.getElementById('serial-status'),
             wsStatus: document.getElementById('ws-status'),
             serialPortsSelect: document.getElementById('serial-ports'),
@@ -15,6 +15,7 @@ class UI {
             tareBtn: document.getElementById('tare-btn'),
             resetBtn: document.getElementById('reset-btn'),
             avgWindow: document.getElementById('avg-window'),
+            avgEnabled: document.getElementById('avg-enabled'),
             displays: {
                 currentPosition: document.getElementById('current-position'),
                 currentAmplitude: document.getElementById('current-amplitude'),
@@ -27,6 +28,15 @@ class UI {
                 currentPressure: document.getElementById('current-pressure')
             }
         };
+
+        // Initialize the averaging controls state
+        const avgWindowLabel = document.getElementById('avg-window-label');
+        elements.avgWindow.disabled = !elements.avgEnabled.checked;
+        if (!elements.avgEnabled.checked) {
+            avgWindowLabel.classList.add('disabled');
+        }
+
+        return elements;
     }
     
     initializeDisplays() {
@@ -39,12 +49,31 @@ class UI {
     }
     
     setupEventListeners() {
-        this.elements.avgWindow.addEventListener('change', () => {
+        // Get the averaging checkbox and window elements
+        const avgEnabled = document.getElementById('avg-enabled');
+        const avgWindow = this.elements.avgWindow;
+        const avgWindowLabel = document.getElementById('avg-window-label');
+
+        // Add event listener for the averaging window input
+        avgWindow.addEventListener('change', () => {
             // Event will be handled by plots manager
             const event = new CustomEvent('averaging-window-changed', {
                 detail: { window: this.getAveragingWindow() }
             });
             window.dispatchEvent(event);
+        });
+
+        // Add event listener for the checkbox
+        avgEnabled.addEventListener('change', (e) => {
+            const isEnabled = e.target.checked;
+            avgWindow.disabled = !isEnabled;
+            
+            // Add/remove a class to style the disabled state
+            if (isEnabled) {
+                avgWindowLabel.classList.remove('disabled');
+            } else {
+                avgWindowLabel.classList.add('disabled');
+            }
         });
     }
     
