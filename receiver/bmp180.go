@@ -180,6 +180,70 @@ func (b *BMP180) ReadPressure() (float64, error) {
 	return float64(p+((x1+x2+3791)>>4)) / 100.0, nil
 }
 
+func (b *BMP180) ReadTemperaturePressure() (float64, float64, error) {
+	// Start temperature measurement
+	if err := b.dev.Tx([]byte{ctrlMeas, tempCmd}, nil); err != nil {
+		return 0, 0, err
+	}
+
+	// Wait for temperature measurement
+	time.Sleep(5 * time.Millisecond)
+
+	// Read raw temperature
+	tempBuf := make([]byte, 2)
+	if err := b.dev.Tx([]byte{dataReg}, tempBuf); err != nil {
+		return 0, 0, err
+	}
+
+	rawTemp := int32(binary.BigEndian.Uint16(tempBuf))
+
+	// Calculate true temperature
+	x1 := ((rawTemp - int32(b.cal.ac6)) * int32(b.cal.ac5)) >> 15
+	x2 := (int32(b.cal.mc) << 11) / (x1 + int32(b.cal.md))
+	b5 := x1 + x2
+	temperature := float64((b5 + 8) >> 4) / 10.0
+
+	// Start pressure measurement (OSS = 0 for this example)
+	if err := b.dev.Tx([]byte{ctrlMeas, pressCmd}, nil); err != nil {
+		return 0, 0, err
+	}
+	time.Sleep(5 * time.Millisecond)
+
+	// Read raw pressure
+	pressBuf := make([]byte, 2)
+	if err := b.dev.Tx([]byte{dataReg}, pressBuf); err != nil {
+		return 0, 0, err
+	}
+	rawPress := int32(binary.BigEndian.Uint16(pressBuf))
+
+	// Calculate true pressure
+	b6 := b5 - 4000
+	x1 = (int32(b.cal.b2) * (b6 * b6 >> 12)) >> 11
+	x2 = (int32(b.cal.ac2) * b6) >> 11
+	x3 := x1 + x2
+	b3 := (((int32(b.cal.ac1)*4 + x3) << 0) + 2) >> 2
+
+	x1 = (int32(b.cal.ac3) * b6) >> 13
+	x2 = (int32(b.cal.b1) * ((b6 * b6) >> 12)) >> 16
+	x3 = ((x1 + x2) + 2) >> 2
+	b4 := (uint32(b.cal.ac4) * uint32(x3+32768)) >> 15
+	b7 := uint32(rawPress-b3) * (50000 >> 0)
+
+	var p int32
+	if b7 < 0x80000000 {
+		p = int32((b7 * 2) / b4)
+	} else {
+		p = int32((b7 / b4) * 2)
+	}
+
+	x1 = (p >> 8) * (p >> 8)
+	x1 = (x1 * 3038) >> 16
+	x2 = (-7357 * p) >> 16
+	pressure := float64(p+((x1+x2+3791)>>4)) / 100.0
+
+	return temperature, pressure, nil
+}
+
 func (b *BMP180) Close() error {
 	return b.bus.Close()
 }

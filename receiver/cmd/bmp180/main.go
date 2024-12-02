@@ -15,15 +15,9 @@ func main() {
 	defer bmp.Close()
 
 	for {
-		temp, err := bmp.ReadTemperature()
+		temp, pressure, err := bmp.ReadTemperaturePressure()
 		if err != nil {
 			log.Printf("Error reading temperature: %v", err)
-			continue
-		}
-
-		pressure, err := bmp.ReadPressure()
-		if err != nil {
-			log.Printf("Error reading pressure: %v", err)
 			continue
 		}
 
