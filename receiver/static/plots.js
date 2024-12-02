@@ -3,6 +3,7 @@ class Plots {
         this.initializePlots();
         this.reset();
         this.lastAvgWindow = null;
+        this.plotStates = {};
     }
 
     reset() {
@@ -22,6 +23,8 @@ class Plots {
             periodData: 0,
             amplitudeRateData: 0
         };
+
+        this.plotStates = {};
     }
 
     updateMovingAverage(array, prevArray, window, prevLength) {
@@ -118,12 +121,34 @@ class Plots {
         ];
 
         updates.forEach(({ id, x, y }) => {
-            Plotly.update(id, {
-                x: [x],
-                y: [y]
-            }).catch(error => {
-                console.error(`Error updating ${id}:`, error);
-            });
+            // Initialize state object for this plot if it doesn't exist
+            if (!this.plotStates[id]) {
+                this.plotStates[id] = {
+                    lastLength: 0,
+                    lastX: null,
+                    lastY: null
+                };
+            }
+
+            const state = this.plotStates[id];
+            const hasNewData = y.length !== state.lastLength;
+            const lastPointChanged = 
+                (y.length > 0 && state.lastY !== y[y.length - 1]) ||
+                (x.length > 0 && state.lastX !== x[x.length - 1]);
+
+            if (hasNewData || lastPointChanged) {
+                Plotly.update(id, {
+                    x: [x],
+                    y: [y]
+                }).catch(error => {
+                    console.error(`Error updating ${id}:`, error);
+                });
+
+                // Update state
+                state.lastLength = y.length;
+                state.lastX = x.length > 0 ? x[x.length - 1] : null;
+                state.lastY = y.length > 0 ? y[y.length - 1] : null;
+            }
         });
     }
 
