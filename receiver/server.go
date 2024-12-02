@@ -1,4 +1,4 @@
-package main
+package receiver
 
 import (
 	"encoding/json"
@@ -142,9 +142,4 @@ func (s *Server) handleTare(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
-}
-
-func main() {
-	server := NewServer()
-	server.Start()
 }
