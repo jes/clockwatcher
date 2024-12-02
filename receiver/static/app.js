@@ -74,7 +74,18 @@ class ClockWatcher {
         this.serial.fetchSerialPorts();
         
         // Start periodic plot updates
-        setInterval(() => this.redraw(), 100);
+        this.scheduleRedraw();
+    }
+
+    scheduleRedraw() {
+        if (!this.redrawInProgress) {
+            this.redrawInProgress = true;
+            this.redraw();
+            setTimeout(() => {
+                this.redrawInProgress = false;
+                this.scheduleRedraw();
+            }, 100);
+        }
     }
 
     redraw() {
