@@ -119,39 +119,70 @@ class Plots {
             { id: 'amplitude-rate-chart-avg', y: this.avgAmplitudeRate, x: data.amplitudeRateTimestamps },
             { id: 'amplitude-period-chart-avg', y: this.avgPeriod, x: this.avgAmplitude },
             { id: 'position-velocity-chart', y: this.avgVelocities, x: data.counts },
-            { id: 'temperature-chart', y: data.bmp180Temperatures, x: data.bmp180Timestamps },
+            { 
+                id: 'temperature-chart', 
+                x: [data.bmp180Timestamps, data.sht85Timestamps], 
+                y: [data.bmp180Temperatures, data.sht85Temperatures] 
+            },
             { id: 'pressure-chart', y: data.bmp180Pressures, x: data.bmp180Timestamps },
             { id: 'humidity-chart', y: data.sht85Humidities, x: data.sht85Timestamps },
         ];
 
         updates.forEach(({ id, x, y }) => {
-            // Initialize state object for this plot if it doesn't exist
             if (!this.plotStates[id]) {
                 this.plotStates[id] = {
-                    lastLength: 0,
-                    lastX: null,
-                    lastY: null
+                    lastLength: [0, 0],  // Array for multiple traces
+                    lastX: [null, null],
+                    lastY: [null, null]
                 };
             }
 
             const state = this.plotStates[id];
-            const hasNewData = y.length !== state.lastLength;
-            const lastPointChanged = 
-                (y.length > 0 && state.lastY !== y[y.length - 1]) ||
-                (x.length > 0 && state.lastX !== x[x.length - 1]);
+            
+            // Special handling for temperature chart with multiple traces
+            if (id === 'temperature-chart') {
+                const hasNewData = y[0].length !== state.lastLength[0] || y[1].length !== state.lastLength[1];
+                const lastPointChanged = 
+                    (y[0].length > 0 && state.lastY[0] !== y[0][y[0].length - 1]) ||
+                    (x[0].length > 0 && state.lastX[0] !== x[0][x[0].length - 1]) ||
+                    (y[1].length > 0 && state.lastY[1] !== y[1][y[1].length - 1]) ||
+                    (x[1].length > 0 && state.lastX[1] !== x[1][x[1].length - 1]);
 
-            if (hasNewData || lastPointChanged) {
-                Plotly.update(id, {
-                    x: [x],
-                    y: [y]
-                }).catch(error => {
-                    console.error(`Error updating ${id}:`, error);
-                });
+                if (hasNewData || lastPointChanged) {
+                    Plotly.update(id, {
+                        x: x,
+                        y: y
+                    }).catch(error => {
+                        console.error(`Error updating ${id}:`, error);
+                    });
 
-                // Update state
-                state.lastLength = y.length;
-                state.lastX = x.length > 0 ? x[x.length - 1] : null;
-                state.lastY = y.length > 0 ? y[y.length - 1] : null;
+                    // Update state
+                    state.lastLength = [y[0].length, y[1].length];
+                    state.lastX = [x[0].length > 0 ? x[0][x[0].length - 1] : null,
+                                 x[1].length > 0 ? x[1][x[1].length - 1] : null];
+                    state.lastY = [y[0].length > 0 ? y[0][y[0].length - 1] : null,
+                                 y[1].length > 0 ? y[1][y[1].length - 1] : null];
+                }
+            } else {
+                // Original handling for single-trace plots
+                const hasNewData = y.length !== state.lastLength;
+                const lastPointChanged = 
+                    (y.length > 0 && state.lastY !== y[y.length - 1]) ||
+                    (x.length > 0 && state.lastX !== x[x.length - 1]);
+
+                if (hasNewData || lastPointChanged) {
+                    Plotly.update(id, {
+                        x: [x],
+                        y: [y]
+                    }).catch(error => {
+                        console.error(`Error updating ${id}:`, error);
+                    });
+
+                    // Update state
+                    state.lastLength = y.length;
+                    state.lastX = x.length > 0 ? x[x.length - 1] : null;
+                    state.lastY = y.length > 0 ? y[y.length - 1] : null;
+                }
             }
         });
     }
@@ -169,10 +200,18 @@ class Plots {
                 yaxis: { title: yAxisTitle }
             };
 
-            Plotly.newPlot(elementId, [{
-                x, y, mode,
-                name: title
-            }], layout, { responsive: true, displayModeBar: false });
+            // For temperature chart, create two traces
+            if (elementId === 'temperature-chart') {
+                Plotly.newPlot(elementId, [
+                    { x: [], y: [], mode, name: 'BMP180' },
+                    { x: [], y: [], mode, name: 'SHT85' }
+                ], layout, { responsive: true, displayModeBar: false });
+            } else {
+                Plotly.newPlot(elementId, [{
+                    x, y, mode,
+                    name: title
+                }], layout, { responsive: true, displayModeBar: false });
+            }
         };
 
         // Initialize all plots with empty data
