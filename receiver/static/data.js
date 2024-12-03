@@ -29,9 +29,15 @@ class DataRecorder {
         this.amplitudeRateData = [];
         this.amplitudeRateTimestamps = [];
         
-        this.temperatures = [];
-        this.pressures = [];
-        this.environmentalTimestamps = [];
+        // BMP180 sensor data
+        this.bmp180Temperatures = [];
+        this.bmp180Pressures = [];
+        this.bmp180Timestamps = [];
+
+        // SHT85 sensor data
+        this.sht85Temperatures = [];
+        this.sht85Humidities = [];
+        this.sht85Timestamps = [];
     }
 
     tare() {
@@ -69,18 +75,25 @@ class DataRecorder {
         return this.lastNegativePeak || 0;
     }
 
-    getCurrentTemperature() {
-        return this.temperatures[this.temperatures.length - 1] || 0;
+    getCurrentBMP180Temperature() {
+        return this.bmp180Temperatures[this.bmp180Temperatures.length - 1] || 0;
     }
 
-    getCurrentPressure() {
-        return this.pressures[this.pressures.length - 1] || 0;
+    getCurrentBMP180Pressure() {
+        return this.bmp180Pressures[this.bmp180Pressures.length - 1] || 0;
+    }
+
+    getCurrentSHT85Temperature() {
+        return this.sht85Temperatures[this.sht85Temperatures.length - 1] || 0;
+    }
+
+    getCurrentSHT85Humidity() {
+        return this.sht85Humidities[this.sht85Humidities.length - 1] || 0;
     }
 
     addReading(message) {
         if (this.timeOffset == null) {
             this.timeOffset = message.TotalMicros / 1000000;
-            console.log("Time offset:", this.timeOffset);
         }
 
         const timeSeconds = (message.TotalMicros / 1000000) - this.timeOffset;
@@ -111,19 +124,38 @@ class DataRecorder {
         
         if (this.timeOffset == null) {
             this.timeOffset = message.timestamp / 1000000;
-            console.log("bmp Time offset:", this.timeOffset);
         }
         const timeSeconds = (message.timestamp / 1000000) - this.timeOffset;
 
-        this.temperatures.push(message.temperature);
-        this.pressures.push(message.pressure);
-        this.environmentalTimestamps.push(timeSeconds);
+        this.bmp180Temperatures.push(message.temperature);
+        this.bmp180Pressures.push(message.pressure);
+        this.bmp180Timestamps.push(timeSeconds);
 
         // Keep arrays at maxPoints length
-        if (this.temperatures.length > this.maxPoints) {
-            this.temperatures = this.temperatures.slice(-this.maxPoints);
-            this.pressures = this.pressures.slice(-this.maxPoints);
-            this.environmentalTimestamps = this.environmentalTimestamps.slice(-this.maxPoints);
+        if (this.bmp180Temperatures.length > this.maxPoints) {
+            this.bmp180Temperatures = this.bmp180Temperatures.slice(-this.maxPoints);
+            this.bmp180Pressures = this.bmp180Pressures.slice(-this.maxPoints);
+            this.bmp180Timestamps = this.bmp180Timestamps.slice(-this.maxPoints);
+        }
+    }
+
+    addSHT85Reading(message) {
+        if (message.type !== 'SHT85') return;
+        
+        if (this.timeOffset == null) {
+            this.timeOffset = message.timestamp / 1000000;
+        }
+        const timeSeconds = (message.timestamp / 1000000) - this.timeOffset;
+
+        this.sht85Temperatures.push(message.temperature);
+        this.sht85Humidities.push(message.humidity);
+        this.sht85Timestamps.push(timeSeconds);
+
+        // Keep arrays at maxPoints length
+        if (this.sht85Temperatures.length > this.maxPoints) {
+            this.sht85Temperatures = this.sht85Temperatures.slice(-this.maxPoints);
+            this.sht85Humidities = this.sht85Humidities.slice(-this.maxPoints);
+            this.sht85Timestamps = this.sht85Timestamps.slice(-this.maxPoints);
         }
     }
 
@@ -296,5 +328,13 @@ class DataRecorder {
         this.amplitudeRateTimestamps = this.amplitudeRateTimestamps.slice(-this.maxPoints);
         this.periodData = this.periodData.slice(-this.maxPoints);
         this.periodTimestamps = this.periodTimestamps.slice(-this.maxPoints);
+        
+        // Trim environmental sensor arrays
+        this.bmp180Temperatures = this.bmp180Temperatures.slice(-this.maxPoints);
+        this.bmp180Pressures = this.bmp180Pressures.slice(-this.maxPoints);
+        this.bmp180Timestamps = this.bmp180Timestamps.slice(-this.maxPoints);
+        this.sht85Temperatures = this.sht85Temperatures.slice(-this.maxPoints);
+        this.sht85Humidities = this.sht85Humidities.slice(-this.maxPoints);
+        this.sht85Timestamps = this.sht85Timestamps.slice(-this.maxPoints);
     }
 }

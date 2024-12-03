@@ -53,6 +53,8 @@ class ClockWatcher {
                 this.data.addReading(message);
             } else if (message.type === 'BMP180') {
                 this.data.addBMP180Reading(message);
+            } else if (message.type === 'SHT85') {
+                this.data.addSHT85Reading(message);
             }
         });
         

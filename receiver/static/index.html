@@ -44,11 +44,21 @@
         </div>
         <div class="value-card">
             <label>Temperature</label>
-            <span id="current-temperature">0 °C</span>
+            <span id="current-temperature-bmp180">0 °C</span>
+            <small>BMP180</small>
+        </div>
+        <div class="value-card">
+            <label>Temperature</label>
+            <span id="current-temperature-sht85">0 °C</span>
+            <small>SHT85</small>
         </div>
         <div class="value-card">
             <label>Pressure</label>
             <span id="current-pressure">0 hPa</span>
+        </div>
+        <div class="value-card">
+            <label>Humidity</label>
+            <span id="current-humidity">0 %</span>
         </div>
     </div>
 
@@ -66,6 +76,7 @@
         <div class="chart-grid">
             <div id="temperature-chart" class="chart"></div>
             <div id="pressure-chart" class="chart"></div>
+            <div id="humidity-chart" class="chart"></div>
         </div>
     </div>
     <div class="chart-group">

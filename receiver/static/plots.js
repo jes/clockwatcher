@@ -21,7 +21,10 @@ class Plots {
             accelerations: 0,
             amplitudeData: 0,
             periodData: 0,
-            amplitudeRateData: 0
+            amplitudeRateData: 0,
+            temperatureData: 0,
+            pressureData: 0,
+            humidityData: 0
         };
 
         this.plotStates = {};
@@ -116,8 +119,9 @@ class Plots {
             { id: 'amplitude-rate-chart-avg', y: this.avgAmplitudeRate, x: data.amplitudeRateTimestamps },
             { id: 'amplitude-period-chart-avg', y: this.avgPeriod, x: this.avgAmplitude },
             { id: 'position-velocity-chart', y: this.avgVelocities, x: data.counts },
-            { id: 'temperature-chart', y: data.temperatures, x: data.environmentalTimestamps },
-            { id: 'pressure-chart', y: data.pressures, x: data.environmentalTimestamps },
+            { id: 'temperature-chart', y: data.bmp180Temperatures, x: data.bmp180Timestamps },
+            { id: 'pressure-chart', y: data.bmp180Pressures, x: data.bmp180Timestamps },
+            { id: 'humidity-chart', y: data.sht85Humidities, x: data.sht85Timestamps },
         ];
 
         updates.forEach(({ id, x, y }) => {
@@ -201,6 +205,8 @@ class Plots {
             'Temperature', 'Time (s)', 'Temperature (°C)');
         createPlot('pressure-chart', [], [],
             'Pressure', 'Time (s)', 'Pressure (hPa)');
+        createPlot('humidity-chart', [], [],
+            'Humidity', 'Time (s)', 'Humidity (%)');
     }
 
     movingAverage(array, window) {

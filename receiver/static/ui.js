@@ -24,8 +24,10 @@ class UI {
                 negativePeriod: document.getElementById('negative-period'),
                 positivePeak: document.getElementById('positive-peak'),
                 negativePeak: document.getElementById('negative-peak'),
-                currentTemperature: document.getElementById('current-temperature'),
-                currentPressure: document.getElementById('current-pressure')
+                currentTemperatureBMP180: document.getElementById('current-temperature-bmp180'),
+                currentTemperatureSHT85: document.getElementById('current-temperature-sht85'),
+                currentPressure: document.getElementById('current-pressure'),
+                currentHumidity: document.getElementById('current-humidity')
             }
         };
 
@@ -41,7 +43,7 @@ class UI {
     
     initializeDisplays() {
         Object.values(this.elements.displays).forEach(element => {
-            element.textContent = '0°';
+            element.textContent = '0';
         });
         this.elements.displays.currentPeriod.textContent = '0.0s';
         this.elements.displays.positivePeriod.textContent = '0.0s';
@@ -111,8 +113,10 @@ class UI {
         displays.negativePeriod.textContent = `${data.getNegativeHalfperiod().toFixed(6)}s`;
         displays.positivePeak.textContent = `+${data.getPositiveAmplitude().toFixed(2)}°`;
         displays.negativePeak.textContent = `${data.getNegativeAmplitude().toFixed(2)}°`;
-        displays.currentTemperature.textContent = `${data.getCurrentTemperature().toFixed(2)} °C`;
-        displays.currentPressure.textContent = `${data.getCurrentPressure().toFixed(2)} hPa`;
+        displays.currentTemperatureBMP180.textContent = `${data.getCurrentBMP180Temperature().toFixed(2)} °C`;
+        displays.currentTemperatureSHT85.textContent = `${data.getCurrentSHT85Temperature().toFixed(2)} °C`;
+        displays.currentPressure.textContent = `${data.getCurrentBMP180Pressure().toFixed(2)} hPa`;
+        displays.currentHumidity.textContent = `${data.getCurrentSHT85Humidity().toFixed(2)} %`;
     }
     
     updateSerialPorts(ports) {
