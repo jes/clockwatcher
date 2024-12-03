@@ -19,6 +19,8 @@ type Server struct {
 	tareOffset int
 	bmp        *BMP180
 	bmpReadings chan BMP180Reading
+	sht        *SHT85
+	shtReadings chan SHT85Reading
 }
 
 type BMP180Reading struct {
@@ -28,11 +30,19 @@ type BMP180Reading struct {
     Timestamp   int64   `json:"timestamp"`
 }
 
+type SHT85Reading struct {
+	Type        string  `json:"type"`
+	Temperature float64 `json:"temperature"`
+	Humidity    float64 `json:"humidity"`
+	Timestamp   int64   `json:"timestamp"`
+}
+
 func NewServer() *Server {
 	s := &Server{
 		readings:     make(chan Reading),
 		statusChan:   make(chan StatusMessage),
 		bmpReadings:  make(chan BMP180Reading),
+		shtReadings:  make(chan SHT85Reading),
 	}
 	ws := NewWebSocketServer()
 	ws.server = s
@@ -43,6 +53,13 @@ func NewServer() *Server {
 		log.Printf("Failed to initialize BMP180: %v", err)
 	} else {
 		s.bmp = bmp
+	}
+
+	sht, err := NewSHT85()
+	if err != nil {
+		log.Printf("Failed to initialize SHT85: %v", err)
+	} else {
+		s.sht = sht
 	}
 
 	return s
@@ -62,6 +79,11 @@ func (s *Server) Start() {
 		go s.monitorBMP180()
 	}
 
+	// Start SHT85 monitoring if available
+	if s.sht != nil {
+		go s.monitorSHT85()
+	}
+
 	// Block main goroutine
 	select {}
 }
@@ -75,6 +97,8 @@ func (s *Server) broadcastMessages() {
 			s.wsServer.Broadcast(status)
 		case bmpReading := <-s.bmpReadings:
 			s.wsServer.Broadcast(bmpReading)
+		case shtReading := <-s.shtReadings:
+			s.wsServer.Broadcast(shtReading)
 		}
 	}
 }
@@ -190,4 +214,26 @@ func (s *Server) monitorBMP180() {
 
         s.bmpReadings <- reading
     }
+}
+
+func (s *Server) monitorSHT85() {
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		temp, humidity, err := s.sht.ReadTemperatureHumidity()
+		if err != nil {
+			log.Printf("Error reading SHT85: %v", err)
+			continue
+		}
+
+		reading := SHT85Reading{
+			Type:        "SHT85",
+			Temperature: temp,
+			Humidity:    humidity,
+			Timestamp:   time.Now().UnixMicro(),
+		}
+
+		s.shtReadings <- reading
+	}
 }
