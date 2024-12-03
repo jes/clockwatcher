@@ -111,84 +111,94 @@ class Plots {
         };
 
         const updates = [
-            { id: 'position-chart', y: data.counts, x: data.timestamps },
-            { id: 'velocity-chart', y: this.avgVelocities, x: data.timestamps },
-            { id: 'acceleration-chart', y: this.avgAccelerations, x: data.timestamps },
-            { id: 'period-chart-avg', y: this.avgPeriod, x: data.periodTimestamps },
-            { id: 'amplitude-chart-avg', y: this.avgAmplitude, x: data.amplitudeTimestamps },
-            { id: 'amplitude-rate-chart-avg', y: this.avgAmplitudeRate, x: data.amplitudeRateTimestamps },
-            { id: 'amplitude-period-chart-avg', y: this.avgPeriod, x: this.avgAmplitude },
-            { id: 'position-velocity-chart', y: this.avgVelocities, x: data.counts },
+            { 
+                id: 'position-chart', 
+                x: [data.timestamps], 
+                y: [data.counts] 
+            },
+            { 
+                id: 'velocity-chart', 
+                x: [data.timestamps], 
+                y: [this.avgVelocities] 
+            },
+            { 
+                id: 'acceleration-chart', 
+                x: [data.timestamps], 
+                y: [this.avgAccelerations] 
+            },
+            { 
+                id: 'period-chart-avg', 
+                x: [data.periodTimestamps], 
+                y: [this.avgPeriod] 
+            },
+            { 
+                id: 'amplitude-chart-avg', 
+                x: [data.amplitudeTimestamps], 
+                y: [this.avgAmplitude] 
+            },
+            { 
+                id: 'amplitude-rate-chart-avg', 
+                x: [data.amplitudeRateTimestamps], 
+                y: [this.avgAmplitudeRate] 
+            },
+            { 
+                id: 'amplitude-period-chart-avg', 
+                x: [this.avgAmplitude], 
+                y: [this.avgPeriod] 
+            },
+            { 
+                id: 'position-velocity-chart', 
+                x: [data.counts], 
+                y: [this.avgVelocities] 
+            },
             { 
                 id: 'temperature-chart', 
                 x: [data.bmp180Timestamps, data.sht85Timestamps], 
-                y: [data.bmp180Temperatures, data.sht85Temperatures] 
+                y: [data.bmp180Temperatures, data.sht85Temperatures],
             },
-            { id: 'pressure-chart', y: data.bmp180Pressures, x: data.bmp180Timestamps },
-            { id: 'humidity-chart', y: data.sht85Humidities, x: data.sht85Timestamps },
+            { 
+                id: 'pressure-chart', 
+                x: [data.bmp180Timestamps], 
+                y: [data.bmp180Pressures] 
+            },
+            { 
+                id: 'humidity-chart', 
+                x: [data.sht85Timestamps], 
+                y: [data.sht85Humidities] 
+            }
         ];
 
         updates.forEach(({ id, x, y }) => {
             if (!this.plotStates[id]) {
                 this.plotStates[id] = {
-                    lastLength: [0, 0],  // Array for multiple traces
-                    lastX: [null, null],
-                    lastY: [null, null]
+                    lastLength: Array(x.length).fill(0),
+                    lastX: Array(x.length).fill(null),
+                    lastY: Array(x.length).fill(null)
                 };
             }
 
             const state = this.plotStates[id];
-            
-            // Special handling for temperature chart with multiple traces
-            if (id === 'temperature-chart') {
-                const hasNewData = y[0].length !== state.lastLength[0] || y[1].length !== state.lastLength[1];
-                const lastPointChanged = 
-                    (y[0].length > 0 && state.lastY[0] !== y[0][y[0].length - 1]) ||
-                    (x[0].length > 0 && state.lastX[0] !== x[0][x[0].length - 1]) ||
-                    (y[1].length > 0 && state.lastY[1] !== y[1][y[1].length - 1]) ||
-                    (x[1].length > 0 && state.lastX[1] !== x[1][x[1].length - 1]);
+            const hasNewData = y.some((trace, i) => trace.length !== state.lastLength[i]);
+            const lastPointChanged = y.some((trace, i) => 
+                (trace.length > 0 && state.lastY[i] !== trace[trace.length - 1]) ||
+                (x[i].length > 0 && state.lastX[i] !== x[i][x[i].length - 1])
+            );
 
-                if (hasNewData || lastPointChanged) {
-                    Plotly.update(id, {
-                        x: x,
-                        y: y
-                    }).catch(error => {
-                        console.error(`Error updating ${id}:`, error);
-                    });
+            if (hasNewData || lastPointChanged) {
+                Plotly.update(id, { x, y }).catch(error => {
+                    console.error(`Error updating ${id}:`, error);
+                });
 
-                    // Update state
-                    state.lastLength = [y[0].length, y[1].length];
-                    state.lastX = [x[0].length > 0 ? x[0][x[0].length - 1] : null,
-                                 x[1].length > 0 ? x[1][x[1].length - 1] : null];
-                    state.lastY = [y[0].length > 0 ? y[0][y[0].length - 1] : null,
-                                 y[1].length > 0 ? y[1][y[1].length - 1] : null];
-                }
-            } else {
-                // Original handling for single-trace plots
-                const hasNewData = y.length !== state.lastLength;
-                const lastPointChanged = 
-                    (y.length > 0 && state.lastY !== y[y.length - 1]) ||
-                    (x.length > 0 && state.lastX !== x[x.length - 1]);
-
-                if (hasNewData || lastPointChanged) {
-                    Plotly.update(id, {
-                        x: [x],
-                        y: [y]
-                    }).catch(error => {
-                        console.error(`Error updating ${id}:`, error);
-                    });
-
-                    // Update state
-                    state.lastLength = y.length;
-                    state.lastX = x.length > 0 ? x[x.length - 1] : null;
-                    state.lastY = y.length > 0 ? y[y.length - 1] : null;
-                }
+                // Update state
+                state.lastLength = y.map(trace => trace.length);
+                state.lastX = x.map(trace => trace.length > 0 ? trace[trace.length - 1] : null);
+                state.lastY = y.map(trace => trace.length > 0 ? trace[trace.length - 1] : null);
             }
         });
     }
 
     initializePlots() {
-        const createPlot = (elementId, x, y, title, xAxisTitle, yAxisTitle, mode = 'lines') => {
+        const createPlot = ({ elementId, title, xAxisTitle, yAxisTitle, mode = 'lines', names = [title] }) => {
             const layout = {
                 autosize: true,
                 responsive: true,
@@ -200,18 +210,17 @@ class Plots {
                 yaxis: { title: yAxisTitle }
             };
 
-            // For temperature chart, create two traces
-            if (elementId === 'temperature-chart') {
-                Plotly.newPlot(elementId, [
-                    { x: [], y: [], mode, name: 'BMP180' },
-                    { x: [], y: [], mode, name: 'SHT85' }
-                ], layout, { responsive: true, displayModeBar: false });
-            } else {
-                Plotly.newPlot(elementId, [{
-                    x, y, mode,
-                    name: title
-                }], layout, { responsive: true, displayModeBar: false });
-            }
+            const traces = names.map(name => ({
+                x: [],
+                y: [],
+                mode,
+                name
+            }));
+
+            Plotly.newPlot(elementId, traces, layout, { 
+                responsive: true, 
+                displayModeBar: false 
+            });
         };
 
         // Initialize all plots with empty data
@@ -220,32 +229,81 @@ class Plots {
 
     createAllPlots(createPlot) {
         // Raw measurements
-        createPlot('position-chart', [], [], 
-            'Balance wheel position', 'Time (s)', 'Position (degrees)');
-        createPlot('position-velocity-chart', [], [],
-            'Position vs Velocity', 'Position (degrees)', 'Velocity (degrees/s)');
-        createPlot('velocity-chart', [], [],
-            'Balance wheel velocity', 'Time (s)', 'Velocity (degrees/s)');
-        createPlot('acceleration-chart', [], [],
-            'Balance wheel acceleration', 'Time (s)', 'Acceleration (degrees/s²)');
+        createPlot({
+            elementId: 'position-chart',
+            title: 'Balance wheel position',
+            xAxisTitle: 'Time (s)',
+            yAxisTitle: 'Position (degrees)'
+        });
+        
+        createPlot({
+            elementId: 'position-velocity-chart',
+            title: 'Position vs Velocity',
+            xAxisTitle: 'Position (degrees)',
+            yAxisTitle: 'Velocity (degrees/s)'
+        });
+        
+        createPlot({
+            elementId: 'velocity-chart',
+            title: 'Balance wheel velocity',
+            xAxisTitle: 'Time (s)',
+            yAxisTitle: 'Velocity (degrees/s)'
+        });
+        createPlot({
+            elementId: 'acceleration-chart',
+            title: 'Balance wheel acceleration',
+            xAxisTitle: 'Time (s)',
+            yAxisTitle: 'Acceleration (degrees/s²)'
+        });
 
         // Averaged measurements
-        createPlot('period-chart-avg', [], [],
-            'Period (Averaged)', 'Time (s)', 'Period (s)');
-        createPlot('amplitude-chart-avg', [], [],
-            'Amplitude (Averaged)', 'Time (s)', 'Amplitude (degrees)');
-        createPlot('amplitude-rate-chart-avg', [], [],
-            'Rate of Change of Amplitude (Averaged)', 'Time (s)', 'Amplitude Rate (degrees/s)');
-        createPlot('amplitude-period-chart-avg', [], [],
-            'Amplitude vs Period (Averaged)', 'Amplitude (degrees)', 'Period (s)', 'markers');
+        createPlot({
+            elementId: 'period-chart-avg',
+            title: 'Period (Averaged)',
+            xAxisTitle: 'Time (s)',
+            yAxisTitle: 'Period (s)'
+        });
+        createPlot({
+            elementId: 'amplitude-chart-avg',
+            title: 'Amplitude (Averaged)',
+            xAxisTitle: 'Time (s)',
+            yAxisTitle: 'Amplitude (degrees)'
+        });
+        createPlot({
+            elementId: 'amplitude-rate-chart-avg',
+            title: 'Rate of Change of Amplitude (Averaged)',
+            xAxisTitle: 'Time (s)',
+            yAxisTitle: 'Amplitude Rate (degrees/s)'
+        });
+        createPlot({
+            elementId: 'amplitude-period-chart-avg',
+            title: 'Amplitude vs Period (Averaged)',
+            xAxisTitle: 'Amplitude (degrees)',
+            yAxisTitle: 'Period (s)',
+            mode: 'markers'
+        });
 
         // Environmental measurements
-        createPlot('temperature-chart', [], [],
-            'Temperature', 'Time (s)', 'Temperature (°C)');
-        createPlot('pressure-chart', [], [],
-            'Pressure', 'Time (s)', 'Pressure (hPa)');
-        createPlot('humidity-chart', [], [],
-            'Humidity', 'Time (s)', 'Humidity (%)');
+        createPlot({
+            elementId: 'temperature-chart',
+            title: 'Temperature',
+            xAxisTitle: 'Time (s)',
+            yAxisTitle: 'Temperature (°C)',
+            mode: 'lines',
+            names: ['BMP180', 'SHT85']
+        });
+        createPlot({
+            elementId: 'pressure-chart',
+            title: 'Pressure',
+            xAxisTitle: 'Time (s)',
+            yAxisTitle: 'Pressure (hPa)'
+        });
+        createPlot({
+            elementId: 'humidity-chart',
+            title: 'Humidity',
+            xAxisTitle: 'Time (s)',
+            yAxisTitle: 'Humidity (%)'
+        });
     }
 
     movingAverage(array, window) {
