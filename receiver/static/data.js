@@ -111,10 +111,22 @@ class DataRecorder {
         this.timestamps.push(timeSeconds);
         this.timestampDrifts.push(message.TimestampDrift);
         
-        if (this.timestampDrifts.length > 1) {
-            const currentDriftRate = this.getCurrentTimestampDriftRate() || 0.0;
-            const driftRate = message.TimestampDrift - currentDriftRate;
-            this.timestampDriftRates.push(currentDriftRate * 0.99 + driftRate * 0.01);
+        if (this.timestampDrifts.length > 100) {
+            const ts0 = this.timestamps[this.timestamps.length - 99] * 1000000;
+            const ts1 = this.timestamps[this.timestamps.length - 1] * 1000000;
+
+            const esp_ts0 = this.timestampDrifts[this.timestampDrifts.length - 99] + ts0;
+            const esp_ts1 = this.timestampDrifts[this.timestampDrifts.length - 1] + ts1;
+
+            // Calculate instantaneous drift rate
+            const instantDriftRate = ((esp_ts1 - esp_ts0) / (ts1 - ts0) - 1.0) * 1000000;
+
+            // exponential moving average
+            const currentDriftRate = this.timestampDriftRates[this.timestampDriftRates.length - 1] || 0.0;
+            const k = 0.001;
+            const smoothedDriftRate = (k * instantDriftRate) + ((1 - k) * currentDriftRate);
+            
+            this.timestampDriftRates.push(smoothedDriftRate);
         }
         
         this.counts.push(degrees || 0);
