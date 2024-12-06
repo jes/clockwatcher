@@ -10,6 +10,7 @@ class DataRecorder {
         this.timeOffset = null;
         this.counts = [];
         this.timestampDrifts = [];
+        this.timestampDriftRates = [];
         this.velocities = [];
         this.accelerations = [];
         this.smoothingWindow = 20;
@@ -95,6 +96,10 @@ class DataRecorder {
         return this.sht85Humidities[this.sht85Humidities.length - 1] || 0;
     }
 
+    getCurrentTimestampDriftRate() {
+        return this.timestampDriftRates[this.timestampDriftRates.length - 1] || 0;
+    }
+
     addReading(message) {
         if (this.timeOffset == null) {
             this.timeOffset = message.TotalMicros / 1000000;
@@ -105,6 +110,13 @@ class DataRecorder {
 
         this.timestamps.push(timeSeconds);
         this.timestampDrifts.push(message.TimestampDrift);
+        
+        if (this.timestampDrifts.length > 1) {
+            const currentDriftRate = this.getCurrentTimestampDriftRate() || 0.0;
+            const driftRate = message.TimestampDrift - currentDriftRate;
+            this.timestampDriftRates.push(currentDriftRate * 0.99 + driftRate * 0.01);
+        }
+        
         this.counts.push(degrees || 0);
         
         this.detectCrossingsAndPeaks();
@@ -326,6 +338,7 @@ class DataRecorder {
         this.timestamps = this.timestamps.slice(-this.maxPoints);
         this.counts = this.counts.slice(-this.maxPoints);
         this.timestampDrifts = this.timestampDrifts.slice(-this.maxPoints);
+        this.timestampDriftRates = this.timestampDriftRates.slice(-this.maxPoints);
         this.velocities = this.velocities.slice(-this.maxPoints);
         this.accelerations = this.accelerations.slice(-this.maxPoints);
         this.amplitudeData = this.amplitudeData.slice(-this.maxPoints);

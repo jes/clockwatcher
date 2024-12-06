@@ -96,6 +96,13 @@ class Plots {
             yAxisTitle: 'Drift (μs)'
         });
 
+        createPlot({
+            elementId: 'timestamp-drift-rate-chart',
+            title: 'Timestamp Drift Rate',
+            xAxisTitle: 'Time (s)',
+            yAxisTitle: 'Drift Rate (μs/s)'
+        });
+
         // Averaged measurements
         createPlot({
             elementId: 'period-chart-avg',
@@ -301,6 +308,11 @@ class Plots {
                 id: 'timestamp-drift-chart', 
                 x: [data.timestamps], 
                 y: [data.timestampDrifts] 
+            },
+            { 
+                id: 'timestamp-drift-rate-chart', 
+                x: [data.timestamps], 
+                y: [data.timestampDriftRates] 
             }
         ];
 
