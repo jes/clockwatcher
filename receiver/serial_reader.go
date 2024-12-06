@@ -69,6 +69,8 @@ func (sr *SerialReader) StartReading(readings chan<- Reading) {
 		}
 	}()
 
+	var lastReadingTime int64 // Track the last reading time in Unix micros
+
 	for {
 		if sr.consecutiveErrors >= maxConsecutiveErrors {
 			errMsg := fmt.Sprintf("Too many consecutive read errors (%d), disconnecting", sr.consecutiveErrors)
@@ -86,11 +88,23 @@ func (sr *SerialReader) StartReading(readings chan<- Reading) {
 			continue
 		}
 
+		currentTime := time.Now().UnixMicro()
+
 		// Initialize time offset on first reading
 		if sr.timeOffset == 0 {
-			sr.timeOffset = time.Now().UnixMicro()
+			sr.timeOffset = currentTime
 			sr.firstTimestamp = uint64(timestamp)
+		} else {
+			// Check if more than 60 seconds have elapsed since last reading
+			if currentTime-lastReadingTime > 60*1000000 {
+				// Resync the time offset
+				sr.timeOffset = currentTime
+				sr.firstTimestamp = uint64(timestamp)
+				sr.overflowCount = 0 // Reset overflow count with new sync
+				log.Printf("Resyncing time offset due to >60s gap between readings")
+			}
 		}
+		lastReadingTime = currentTime
 
 		// Handle timestamp overflow
 		if timestamp < sr.lastTimestamp {
