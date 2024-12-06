@@ -293,7 +293,9 @@ class Plots {
         ];
 
         updates.forEach(({ id, x, y }) => {
+            let haveReset = false;
             if (!this.plotStates[id]) {
+                haveReset = true;
                 this.plotStates[id] = {
                     lastLength: Array(x.length).fill(0),
                     lastX: Array(x.length).fill(null),
@@ -308,7 +310,7 @@ class Plots {
                 (x[i].length > 0 && state.lastX[i] !== x[i][x[i].length - 1])
             );
 
-            if (hasNewData || lastPointChanged) {
+            if (haveReset || hasNewData || lastPointChanged) {
                 Plotly.update(id, { x, y }).catch(error => {
                     console.error(`Error updating ${id}:`, error);
                 });
