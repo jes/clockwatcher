@@ -30,26 +30,6 @@ class Plots {
         this.plotStates = {};
     }
 
-    updateMovingAverage(array, prevArray, window, prevLength) {
-        if (array.length < prevLength) {
-            // Data was reset, recalculate entire array
-            return this.movingAverage(array, window);
-        }
-        
-        // Only calculate new points
-        for (let i = prevLength; i < array.length; i++) {
-            if (i < window - 1) continue;
-            
-            let sum = 0;
-            for (let j = i - window + 1; j <= i; j++) {
-                sum += array[j];
-            }
-            prevArray.push(sum / window);
-        }
-        
-        return prevArray;
-    }
-
     updateAll(data) {
         // Update moving averages incrementally
         this.avgVelocities = this.updateMovingAverage(
@@ -259,25 +239,25 @@ class Plots {
         // Averaged measurements
         createPlot({
             elementId: 'period-chart-avg',
-            title: 'Period (Averaged)',
+            title: 'Period',
             xAxisTitle: 'Time (s)',
             yAxisTitle: 'Period (s)'
         });
         createPlot({
             elementId: 'amplitude-chart-avg',
-            title: 'Amplitude (Averaged)',
+            title: 'Amplitude',
             xAxisTitle: 'Time (s)',
             yAxisTitle: 'Amplitude (degrees)'
         });
         createPlot({
             elementId: 'amplitude-rate-chart-avg',
-            title: 'Rate of Change of Amplitude (Averaged)',
+            title: 'Rate of Change of Amplitude',
             xAxisTitle: 'Time (s)',
             yAxisTitle: 'Amplitude Rate (degrees/s)'
         });
         createPlot({
             elementId: 'amplitude-period-chart-avg',
-            title: 'Amplitude vs Period (Averaged)',
+            title: 'Amplitude vs Period',
             xAxisTitle: 'Amplitude (degrees)',
             yAxisTitle: 'Period (s)',
             mode: 'markers'
@@ -319,5 +299,25 @@ class Plots {
             result.push(sum / window);
         }
         return result;
+    }
+
+    updateMovingAverage(array, prevArray, window, prevLength) {
+        if (array.length < prevLength) {
+            // Data was reset, recalculate entire array
+            return this.movingAverage(array, window);
+        }
+        
+        // Only calculate new points
+        for (let i = prevLength; i < array.length; i++) {
+            if (i < window - 1) continue;
+            
+            let sum = 0;
+            for (let j = i - window + 1; j <= i; j++) {
+                sum += array[j];
+            }
+            prevArray.push(sum / window);
+        }
+        
+        return prevArray;
     }
 } 
