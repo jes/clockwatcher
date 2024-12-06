@@ -14,6 +14,9 @@ func main() {
 	}
 	defer bmp.Close()
 
+	// Print CSV header
+	fmt.Println("timestamp,temperature,pressure")
+
 	for {
 		temp, pressure, err := bmp.ReadTemperaturePressure()
 		if err != nil {
@@ -21,7 +24,12 @@ func main() {
 			continue
 		}
 
-		fmt.Printf("Temperature: %.2f°C, Pressure: %.2f hPa\n", temp, pressure)
+		// Output in CSV format with RFC3339 timestamp
+		fmt.Printf("%s,%.2f,%.2f\n", 
+			time.Now().Format(time.RFC3339),
+			temp,
+			pressure)
+			
 		time.Sleep(2 * time.Second)
 	}
 }
