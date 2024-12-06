@@ -30,6 +30,150 @@ class Plots {
         this.plotStates = {};
     }
 
+    initializePlots() {
+        const createPlot = ({ elementId, title, xAxisTitle, yAxisTitle, mode = 'lines', names = [title] }) => {
+            const layout = {
+                autosize: true,
+                responsive: true,
+                margin: { l: 50, r: 50, t: 40, b: 40 },
+                width: null,
+                height: 400,
+                title,
+                xaxis: { title: xAxisTitle },
+                yaxis: { title: yAxisTitle }
+            };
+
+            const traces = names.map(name => ({
+                x: [],
+                y: [],
+                mode,
+                name
+            }));
+
+            Plotly.newPlot(elementId, traces, layout, { 
+                responsive: true, 
+                displayModeBar: false 
+            });
+        };
+
+        // Initialize all plots with empty data
+        this.createAllPlots(createPlot);
+    }
+
+    createAllPlots(createPlot) {
+        // Raw measurements
+        createPlot({
+            elementId: 'position-chart',
+            title: 'Balance wheel position',
+            xAxisTitle: 'Time (s)',
+            yAxisTitle: 'Position (degrees)'
+        });
+        
+        createPlot({
+            elementId: 'position-velocity-chart',
+            title: 'Position vs Velocity',
+            xAxisTitle: 'Position (degrees)',
+            yAxisTitle: 'Velocity (degrees/s)'
+        });
+        
+        createPlot({
+            elementId: 'velocity-chart',
+            title: 'Balance wheel velocity',
+            xAxisTitle: 'Time (s)',
+            yAxisTitle: 'Velocity (degrees/s)'
+        });
+        createPlot({
+            elementId: 'acceleration-chart',
+            title: 'Balance wheel acceleration',
+            xAxisTitle: 'Time (s)',
+            yAxisTitle: 'Acceleration (degrees/s²)'
+        });
+
+        // Averaged measurements
+        createPlot({
+            elementId: 'period-chart-avg',
+            title: 'Period',
+            xAxisTitle: 'Time (s)',
+            yAxisTitle: 'Period (s)'
+        });
+        createPlot({
+            elementId: 'amplitude-chart-avg',
+            title: 'Amplitude',
+            xAxisTitle: 'Time (s)',
+            yAxisTitle: 'Amplitude (degrees)'
+        });
+        createPlot({
+            elementId: 'amplitude-rate-chart-avg',
+            title: 'Rate of Change of Amplitude',
+            xAxisTitle: 'Time (s)',
+            yAxisTitle: 'Amplitude Rate (degrees/s)'
+        });
+        createPlot({
+            elementId: 'amplitude-period-chart-avg',
+            title: 'Amplitude vs Period',
+            xAxisTitle: 'Amplitude (degrees)',
+            yAxisTitle: 'Period (s)',
+            mode: 'markers'
+        });
+
+        // Environmental measurements
+        createPlot({
+            elementId: 'temperature-chart',
+            title: 'Temperature',
+            xAxisTitle: 'Time (s)',
+            yAxisTitle: 'Temperature (°C)',
+            mode: 'lines',
+            names: ['BMP180', 'SHT85']
+        });
+        createPlot({
+            elementId: 'pressure-chart',
+            title: 'Pressure',
+            xAxisTitle: 'Time (s)',
+            yAxisTitle: 'Pressure (hPa)'
+        });
+        createPlot({
+            elementId: 'humidity-chart',
+            title: 'Humidity',
+            xAxisTitle: 'Time (s)',
+            yAxisTitle: 'Humidity (%)'
+        });
+    }
+
+    movingAverage(array, window) {
+        if (window <= 1) return array;
+        
+        const result = [];
+        // Skip the first (window-1) points
+        for (let i = window - 1; i < array.length; i++) {
+            let sum = 0;
+            for (let j = i - window + 1; j <= i; j++) {
+                sum += array[j];
+            }
+            result.push(sum / window);
+        }
+        return result;
+    }
+
+    updateMovingAverage(array, prevArray, window, prevLength) {
+        if (array.length < prevLength) {
+            // Data was reset, recalculate entire array
+            return this.movingAverage(array, window);
+        }
+        
+        // Only calculate new points
+        for (let i = prevLength; i < array.length; i++) {
+            if (i < window - 1) continue;
+            
+            let sum = 0;
+            for (let j = i - window + 1; j <= i; j++) {
+                sum += array[j];
+            }
+            prevArray.push(sum / window);
+        }
+        
+        return prevArray;
+    }
+
     updateAll(data) {
         // Update moving averages incrementally
         this.avgVelocities = this.updateMovingAverage(
@@ -175,149 +319,5 @@ class Plots {
                 state.lastY = y.map(trace => trace.length > 0 ? trace[trace.length - 1] : null);
             }
         });
-    }
-
-    initializePlots() {
-        const createPlot = ({ elementId, title, xAxisTitle, yAxisTitle, mode = 'lines', names = [title] }) => {
-            const layout = {
-                autosize: true,
-                responsive: true,
-                margin: { l: 50, r: 50, t: 40, b: 40 },
-                width: null,
-                height: 400,
-                title,
-                xaxis: { title: xAxisTitle },
-                yaxis: { title: yAxisTitle }
-            };
-
-            const traces = names.map(name => ({
-                x: [],
-                y: [],
-                mode,
-                name
-            }));
-
-            Plotly.newPlot(elementId, traces, layout, { 
-                responsive: true, 
-                displayModeBar: false 
-            });
-        };
-
-        // Initialize all plots with empty data
-        this.createAllPlots(createPlot);
-    }
-
-    createAllPlots(createPlot) {
-        // Raw measurements
-        createPlot({
-            elementId: 'position-chart',
-            title: 'Balance wheel position',
-            xAxisTitle: 'Time (s)',
-            yAxisTitle: 'Position (degrees)'
-        });
-        
-        createPlot({
-            elementId: 'position-velocity-chart',
-            title: 'Position vs Velocity',
-            xAxisTitle: 'Position (degrees)',
-            yAxisTitle: 'Velocity (degrees/s)'
-        });
-        
-        createPlot({
-            elementId: 'velocity-chart',
-            title: 'Balance wheel velocity',
-            xAxisTitle: 'Time (s)',
-            yAxisTitle: 'Velocity (degrees/s)'
-        });
-        createPlot({
-            elementId: 'acceleration-chart',
-            title: 'Balance wheel acceleration',
-            xAxisTitle: 'Time (s)',
-            yAxisTitle: 'Acceleration (degrees/s²)'
-        });
-
-        // Averaged measurements
-        createPlot({
-            elementId: 'period-chart-avg',
-            title: 'Period',
-            xAxisTitle: 'Time (s)',
-            yAxisTitle: 'Period (s)'
-        });
-        createPlot({
-            elementId: 'amplitude-chart-avg',
-            title: 'Amplitude',
-            xAxisTitle: 'Time (s)',
-            yAxisTitle: 'Amplitude (degrees)'
-        });
-        createPlot({
-            elementId: 'amplitude-rate-chart-avg',
-            title: 'Rate of Change of Amplitude',
-            xAxisTitle: 'Time (s)',
-            yAxisTitle: 'Amplitude Rate (degrees/s)'
-        });
-        createPlot({
-            elementId: 'amplitude-period-chart-avg',
-            title: 'Amplitude vs Period',
-            xAxisTitle: 'Amplitude (degrees)',
-            yAxisTitle: 'Period (s)',
-            mode: 'markers'
-        });
-
-        // Environmental measurements
-        createPlot({
-            elementId: 'temperature-chart',
-            title: 'Temperature',
-            xAxisTitle: 'Time (s)',
-            yAxisTitle: 'Temperature (°C)',
-            mode: 'lines',
-            names: ['BMP180', 'SHT85']
-        });
-        createPlot({
-            elementId: 'pressure-chart',
-            title: 'Pressure',
-            xAxisTitle: 'Time (s)',
-            yAxisTitle: 'Pressure (hPa)'
-        });
-        createPlot({
-            elementId: 'humidity-chart',
-            title: 'Humidity',
-            xAxisTitle: 'Time (s)',
-            yAxisTitle: 'Humidity (%)'
-        });
-    }
-
-    movingAverage(array, window) {
-        if (window <= 1) return array;
-        
-        const result = [];
-        // Skip the first (window-1) points
-        for (let i = window - 1; i < array.length; i++) {
-            let sum = 0;
-            for (let j = i - window + 1; j <= i; j++) {
-                sum += array[j];
-            }
-            result.push(sum / window);
-        }
-        return result;
-    }
-
-    updateMovingAverage(array, prevArray, window, prevLength) {
-        if (array.length < prevLength) {
-            // Data was reset, recalculate entire array
-            return this.movingAverage(array, window);
-        }
-        
-        // Only calculate new points
-        for (let i = prevLength; i < array.length; i++) {
-            if (i < window - 1) continue;
-            
-            let sum = 0;
-            for (let j = i - window + 1; j <= i; j++) {
-                sum += array[j];
-            }
-            prevArray.push(sum / window);
-        }
-        
-        return prevArray;
     }
 } 
