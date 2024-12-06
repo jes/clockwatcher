@@ -18,6 +18,7 @@ class UI {
             avgEnabled: document.getElementById('avg-enabled'),
             displays: {
                 currentPosition: document.getElementById('current-position'),
+                currentTimestampDrift: document.getElementById('current-timestamp-drift'),
                 currentAmplitude: document.getElementById('current-amplitude'),
                 currentPeriod: document.getElementById('current-period'),
                 positivePeriod: document.getElementById('positive-period'),
@@ -106,6 +107,7 @@ class UI {
     
     updateDisplays(data) {
         const displays = this.elements.displays;
+        displays.currentTimestampDrift.textContent = `${data.getCurrentTimestampDrift()} μs`;
         displays.currentPosition.textContent = `${data.getCurrentPosition().toFixed(0)}°`;
         displays.currentAmplitude.textContent = `${data.getCurrentAmplitude().toFixed(2)}°`;
         displays.currentPeriod.textContent = `${data.getCurrentPeriod().toFixed(6)}s`;

@@ -9,6 +9,7 @@ class DataRecorder {
         this.timestamps = [];
         this.timeOffset = null;
         this.counts = [];
+        this.timestampDrifts = [];
         this.velocities = [];
         this.accelerations = [];
         this.smoothingWindow = 20;
@@ -49,6 +50,9 @@ class DataRecorder {
 
     getCurrentPosition() {
         return this.counts[this.counts.length - 1] || 0;
+    }
+    getCurrentTimestampDrift() {
+        return this.timestampDrifts[this.timestampDrifts.length - 1] || 0;
     }
     getCurrentVelocity() {
         return this.velocities[this.velocities.length - 1] || 0;
@@ -100,6 +104,7 @@ class DataRecorder {
         const degrees = (message.Count * 2) - this.tareOffset;
 
         this.timestamps.push(timeSeconds);
+        this.timestampDrifts.push(message.TimestampDrift);
         this.counts.push(degrees || 0);
         
         this.detectCrossingsAndPeaks();
@@ -320,6 +325,7 @@ class DataRecorder {
     trimArrays() {
         this.timestamps = this.timestamps.slice(-this.maxPoints);
         this.counts = this.counts.slice(-this.maxPoints);
+        this.timestampDrifts = this.timestampDrifts.slice(-this.maxPoints);
         this.velocities = this.velocities.slice(-this.maxPoints);
         this.accelerations = this.accelerations.slice(-this.maxPoints);
         this.amplitudeData = this.amplitudeData.slice(-this.maxPoints);

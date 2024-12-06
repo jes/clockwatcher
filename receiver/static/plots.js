@@ -89,6 +89,13 @@ class Plots {
             yAxisTitle: 'Acceleration (degrees/s²)'
         });
 
+        createPlot({
+            elementId: 'timestamp-drift-chart',
+            title: 'Timestamp Drift',
+            xAxisTitle: 'Time (s)',
+            yAxisTitle: 'Drift (μs)'
+        });
+
         // Averaged measurements
         createPlot({
             elementId: 'period-chart-avg',
@@ -289,6 +296,11 @@ class Plots {
                 id: 'humidity-chart', 
                 x: [data.sht85Timestamps], 
                 y: [data.sht85Humidities] 
+            },
+            { 
+                id: 'timestamp-drift-chart', 
+                x: [data.timestamps], 
+                y: [data.timestampDrifts] 
             }
         ];
 

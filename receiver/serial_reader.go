@@ -22,6 +22,7 @@ const (
 type Reading struct {
 	TotalMicros uint64 `json:"TotalMicros"`
 	Count       int    `json:"Count"`
+	TimestampDrift  int64  `json:"TimestampDrift"`
 }
 
 type StatusMessage struct {
@@ -83,12 +84,10 @@ func (sr *SerialReader) StartReading(readings chan<- Reading) {
 			return // This will trigger the deferred cleanup
 		}
 
-		timestamp, direction, ok := sr.readAndValidatePacket()
+		timestamp, direction, currentTime, ok := sr.readAndValidatePacket()
 		if !ok {
 			continue
 		}
-
-		currentTime := time.Now().UnixMicro()
 
 		// Initialize time offset on first reading
 		if sr.timeOffset == 0 {
@@ -134,15 +133,17 @@ func (sr *SerialReader) StartReading(readings chan<- Reading) {
 		reading := Reading{
 			TotalMicros: uint64(totalMicros),
 			Count:       sr.count,
+			TimestampDrift:  currentTime - int64(totalMicros),
 		}
 
 		readings <- reading
 	}
 }
 
-func (sr *SerialReader) readAndValidatePacket() (uint32, uint8, bool) {
+func (sr *SerialReader) readAndValidatePacket() (uint32, uint8, int64, bool) {
 	// Read exactly 5 bytes
 	n, err := io.ReadFull(sr.port, sr.buffer)
+	currentTime := time.Now().UnixMicro()
 	if err != nil || n != 5 {
 		log.Printf("Error reading from serial: %v", err)
 		sr.consecutiveErrors++
@@ -151,7 +152,7 @@ func (sr *SerialReader) readAndValidatePacket() (uint32, uint8, bool) {
 			Status: StatusError,
 			Error:  err.Error(),
 		}
-		return 0, 0, false
+		return 0, 0, currentTime, false
 	}
 	sr.consecutiveErrors = 0
 
@@ -162,17 +163,17 @@ func (sr *SerialReader) readAndValidatePacket() (uint32, uint8, bool) {
 			Status: StatusOverflow,
 			Error:  "Buffer overflow detected",
 		}
-		return 0, 0, false
+		return 0, 0, currentTime, false
 	}
 
 	if !sr.validateChecksum() {
-		return 0, 0, false
+		return 0, 0, currentTime, false
 	}
 
 	timestamp := binary.BigEndian.Uint32(sr.buffer[:4])
 	direction := (sr.buffer[4] >> 7) & 1
 
-	return timestamp, direction, true
+	return timestamp, direction, currentTime, true
 }
 
 func (sr *SerialReader) isOverflow() bool {
