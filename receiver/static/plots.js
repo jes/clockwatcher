@@ -69,12 +69,12 @@ class Plots {
             yAxisTitle: 'Position (degrees)'
         });
         
-        createPlot({
+        /*createPlot({
             elementId: 'position-velocity-chart',
             title: 'Position vs Velocity',
             xAxisTitle: 'Position (degrees)',
             yAxisTitle: 'Velocity (degrees/s)'
-        });
+        });*/
         
         createPlot({
             elementId: 'velocity-chart',
@@ -284,11 +284,11 @@ class Plots {
                 x: [this.avgAmplitude], 
                 y: [this.avgPeriod] 
             },
-            { 
+            /*{ 
                 id: 'position-velocity-chart', 
                 x: [data.counts], 
                 y: [this.avgVelocities] 
-            },
+            },*/
             { 
                 id: 'temperature-chart', 
                 x: [data.bmp180Timestamps, data.sht85Timestamps], 

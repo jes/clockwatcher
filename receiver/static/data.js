@@ -190,13 +190,13 @@ class DataRecorder {
 
     calculateFiniteDifference(array, step) {
         const halfStep = Math.floor(step / 2);
-        if (array.length < step + halfStep) return 0;
+        if (array.length < step + 1) return 0;
         
-        // Use points equally spaced before and after the current point
-        const dt = this.timestamps[this.timestamps.length - (step - halfStep)] - 
-                  this.timestamps[this.timestamps.length - (step + halfStep)];
-        const dy = array[array.length - (step - halfStep)] - 
-                  array[array.length - (step + halfStep)];
+        // Use the most recent point and a point 'step' positions back
+        const dt = this.timestamps[this.timestamps.length - 1] - 
+                  this.timestamps[this.timestamps.length - step];
+        const dy = array[array.length - 1] - 
+                  array[array.length - step];
         
         return dy / dt;
     }
