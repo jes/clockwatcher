@@ -21,6 +21,7 @@ type Server struct {
 	bmpReadings chan BMP180Reading
 	sht        *SHT85
 	shtReadings chan SHT85Reading
+	dataRecorder *DataRecorder
 }
 
 type BMP180Reading struct {
@@ -44,6 +45,13 @@ func NewServer() *Server {
 		bmpReadings:  make(chan BMP180Reading),
 		shtReadings:  make(chan SHT85Reading),
 	}
+	dr, err := NewDataRecorder()
+	if err != nil {
+		log.Printf("Failed to initialize DataRecorder: %v", err)
+	} else {
+		s.dataRecorder = dr
+	}
+
 	ws := NewWebSocketServer()
 	ws.server = s
 	s.wsServer = ws
@@ -92,12 +100,21 @@ func (s *Server) broadcastMessages() {
 	for {
 		select {
 		case reading := <-s.readings:
+			if s.dataRecorder != nil {
+				s.dataRecorder.AddReading(reading)
+			}
 			s.wsServer.Broadcast(reading)
 		case status := <-s.statusChan:
 			s.wsServer.Broadcast(status)
 		case bmpReading := <-s.bmpReadings:
+			if s.dataRecorder != nil {
+				s.dataRecorder.UpdateBMP180(bmpReading)
+			}
 			s.wsServer.Broadcast(bmpReading)
 		case shtReading := <-s.shtReadings:
+			if s.dataRecorder != nil {
+				s.dataRecorder.UpdateSHT85(shtReading)
+			}
 			s.wsServer.Broadcast(shtReading)
 		}
 	}
