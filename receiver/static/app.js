@@ -73,14 +73,33 @@ class ClockWatcher {
             this.redraw();
         });
 
+        // Add mode switching handler
+        this.ui.onModeChange((mode) => {
+            this.data.setMode(mode);
+            if (mode === 'live') {
+                this.scheduleRedraw();
+            }
+        });
+
+        // Add historical data loading handler
+        this.ui.onLoadHistoricalData(async (startTime, endTime) => {
+            const success = await this.data.loadHistoricalData(startTime, endTime);
+            if (!success) {
+                // TODO: Show error message to user
+                console.error('Failed to load historical data');
+            }
+            this.plots.reset();
+            this.redraw();
+        });
+
         this.serial.fetchSerialPorts();
         
-        // Start periodic plot updates
+        // Start periodic plot updates for live mode
         this.scheduleRedraw();
     }
 
     scheduleRedraw() {
-        if (!this.redrawInProgress) {
+        if (!this.redrawInProgress && this.data.mode === 'live') {
             this.redrawInProgress = true;
             this.redraw();
             setTimeout(() => {

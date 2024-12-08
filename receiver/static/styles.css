@@ -237,3 +237,28 @@ h1 {
     cursor: not-allowed;
     opacity: 0.5;
 }
+
+.time-presets {
+    margin: 10px 0;
+}
+
+.time-presets button {
+    margin-right: 8px;
+    padding: 5px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: #f5f5f5;
+    cursor: pointer;
+}
+
+.time-presets button:hover {
+    background: #e5e5e5;
+}
+
+.custom-time-inputs {
+    margin-top: 10px;
+}
+
+.custom-time-inputs input {
+    margin-right: 8px;
+}

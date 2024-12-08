@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -79,6 +80,7 @@ func (s *Server) Start() {
 	http.HandleFunc("/serial_ports", s.handleListSerialPorts)
 	http.HandleFunc("/connect", s.handleConnectSerialPort)
 	http.HandleFunc("/tare", s.handleTare)
+	http.HandleFunc("/historical_data", s.handleHistoricalData)
 
 	go s.broadcastMessages()
 
@@ -253,4 +255,38 @@ func (s *Server) monitorSHT85() {
 
 		s.shtReadings <- reading
 	}
+}
+
+func (s *Server) handleHistoricalData(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Parse query parameters
+	startTime, err := strconv.ParseInt(r.URL.Query().Get("start"), 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid start time", http.StatusBadRequest)
+		return
+	}
+
+	endTime, err := strconv.ParseInt(r.URL.Query().Get("end"), 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid end time", http.StatusBadRequest)
+		return
+	}
+
+	if s.dataRecorder == nil {
+		http.Error(w, "Data recorder not initialized", http.StatusInternalServerError)
+		return
+	}
+
+	data, err := s.dataRecorder.GetHistoricalData(startTime, endTime)
+	if err != nil {
+		http.Error(w, "Database query failed", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(data)
 }

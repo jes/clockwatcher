@@ -66,6 +66,27 @@
         </div>
     </div>
 
+    <div class="mode-controls">
+        <div class="mode-selector">
+            <label><input type="radio" name="mode" value="live" checked> Live</label>
+            <label><input type="radio" name="mode" value="historical"> Historical</label>
+        </div>
+        <div class="time-bounds" style="display: none;">
+            <div class="time-presets">
+                <button data-period="1h">Last Hour</button>
+                <button data-period="24h">Last 24h</button>
+                <button data-period="7d">Last Week</button>
+                <button data-period="30d">Last Month</button>
+                <button data-period="custom">Custom</button>
+            </div>
+            <div class="custom-time-inputs" style="display: none;">
+                <input type="datetime-local" id="start-time">
+                <input type="datetime-local" id="end-time">
+                <button id="load-data">Load</button>
+            </div>
+        </div>
+    </div>
+
     <div class="chart-group">
         <h2>Raw</h2>
         <div class="chart-grid">

@@ -1,6 +1,7 @@
 class DataRecorder {
     constructor() {
         this.tareOffset = 0;
+        this.mode = 'live';
         this.reset();
     }
 
@@ -101,6 +102,9 @@ class DataRecorder {
     }
 
     addReading(message) {
+        if (this.mode !== 'live') {
+            return null;
+        }
         if (this.timeOffset == null) {
             this.timeOffset = message.TotalMicros / 1000000;
         }
@@ -149,6 +153,9 @@ class DataRecorder {
     }
 
     addBMP180Reading(message) {
+        if (this.mode !== 'live') {
+            return;
+        }
         if (message.type !== 'BMP180') return;
         
         if (this.timeOffset == null) {
@@ -169,6 +176,9 @@ class DataRecorder {
     }
 
     addSHT85Reading(message) {
+        if (this.mode !== 'live') {
+            return;
+        }
         if (message.type !== 'SHT85') return;
         
         if (this.timeOffset == null) {
@@ -367,5 +377,69 @@ class DataRecorder {
         this.sht85Temperatures = this.sht85Temperatures.slice(-this.maxPoints);
         this.sht85Humidities = this.sht85Humidities.slice(-this.maxPoints);
         this.sht85Timestamps = this.sht85Timestamps.slice(-this.maxPoints);
+    }
+
+    setMode(mode) {
+        this.mode = mode;
+        if (mode === 'live') {
+            this.reset();
+        }
+    }
+
+    async loadHistoricalData(startTime, endTime) {
+        try {
+            const response = await fetch(`/historical_data?start=${startTime}&end=${endTime}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            
+            // Reset arrays before loading historical data
+            this.reset();
+
+            if (data == null) {
+                console.error('No data returned from server');
+                return false;
+            }
+            
+            // Process each data point
+            data.forEach(point => {
+                const timeSeconds = point.total_micros / 1000000;
+                if (this.timeOffset === null) {
+                    this.timeOffset = timeSeconds;
+                }
+
+                // Add timestamp data
+                this.timestamps.push(timeSeconds - this.timeOffset);
+                this.timestampDrifts.push(point.timestamp_drift);
+
+                // Add amplitude and period data
+                if (point.amplitude !== null) {
+                    this.amplitudeData.push(point.amplitude);
+                    this.amplitudeTimestamps.push(timeSeconds - this.timeOffset);
+                }
+                if (point.period !== null) {
+                    this.periodData.push(point.period);
+                    this.periodTimestamps.push(timeSeconds - this.timeOffset);
+                }
+
+                // Add environmental data
+                if (point.bmp180_temperature !== null) {
+                    this.bmp180Temperatures.push(point.bmp180_temperature);
+                    this.bmp180Pressures.push(point.bmp180_pressure);
+                    this.bmp180Timestamps.push(timeSeconds - this.timeOffset);
+                }
+                if (point.sht85_temperature !== null) {
+                    this.sht85Temperatures.push(point.sht85_temperature);
+                    this.sht85Humidities.push(point.sht85_humidity);
+                    this.sht85Timestamps.push(timeSeconds - this.timeOffset);
+                }
+            });
+
+            return true;
+        } catch (error) {
+            console.error('Error loading historical data:', error);
+            return false;
+        }
     }
 }

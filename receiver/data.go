@@ -42,6 +42,19 @@ type ZeroCrossing struct {
 	IsPositiveGoing bool
 }
 
+// Add this new type to hold historical data
+type HistoricalData struct {
+	Timestamp         int64   `json:"timestamp"`
+	TotalMicros      uint64  `json:"total_micros"`
+	TimestampDrift   int64   `json:"timestamp_drift"`
+	Amplitude        float64 `json:"amplitude"`
+	Period           float64 `json:"period"`
+	BMP180Temperature float64 `json:"bmp180_temperature"`
+	BMP180Pressure   float64 `json:"bmp180_pressure"`
+	SHT85Temperature float64 `json:"sht85_temperature"`
+	SHT85Humidity    float64 `json:"sht85_humidity"`
+}
+
 func NewDataRecorder() (*DataRecorder, error) {
 	db, err := sql.Open("sqlite3", "readings.db")
 	if err != nil {
@@ -253,4 +266,54 @@ func (dr *DataRecorder) writeToDatabase() error {
 	)
 
 	return err
+}
+
+// Add this new method to DataRecorder
+func (dr *DataRecorder) GetHistoricalData(startTime, endTime int64) ([]HistoricalData, error) {
+	rows, err := dr.db.Query(`
+		SELECT 
+			timestamp,
+			total_micros,
+			timestamp_drift,
+			amplitude,
+			period,
+			bmp180_temperature,
+			bmp180_pressure,
+			sht85_temperature,
+			sht85_humidity
+		FROM readings
+		WHERE timestamp BETWEEN ? AND ?
+		ORDER BY timestamp ASC
+	`, startTime, endTime)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []HistoricalData
+
+	for rows.Next() {
+		var point HistoricalData
+		err := rows.Scan(
+			&point.Timestamp,
+			&point.TotalMicros,
+			&point.TimestampDrift,
+			&point.Amplitude,
+			&point.Period,
+			&point.BMP180Temperature,
+			&point.BMP180Pressure,
+			&point.SHT85Temperature,
+			&point.SHT85Humidity,
+		)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, point)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return results, nil
 }
