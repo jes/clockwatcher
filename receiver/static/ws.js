@@ -90,4 +90,13 @@ class WebSocketManager {
             this.statusHandler(status, ...args);
         }
     }
+    
+    disconnect() {
+        if (this.ws) {
+            // Prevent auto-reconnect when we intentionally disconnect
+            this.ws.onclose = null;
+            this.ws.close();
+            this.ws = null;
+        }
+    }
 } 

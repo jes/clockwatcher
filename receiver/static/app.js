@@ -76,20 +76,26 @@ class ClockWatcher {
         // Add mode switching handler
         this.ui.onModeChange((mode) => {
             this.data.setMode(mode);
+            
+            // Handle WebSocket connection based on mode
             if (mode === 'live') {
+                this.ws.connect();
                 this.scheduleRedraw();
+            } else {
+                this.ws.disconnect();
+                this.ui.updateWebSocketStatus('WebSocket: Disconnected (Historical Mode)');
             }
         });
 
         // Add historical data loading handler
         this.ui.onLoadHistoricalData(async (startTime, endTime) => {
             const success = await this.data.loadHistoricalData(startTime, endTime);
-            if (!success) {
+            if (success) {
+                this.redraw();
+            } else {
                 // TODO: Show error message to user
                 console.error('Failed to load historical data');
             }
-            this.plots.reset();
-            this.redraw();
         });
 
         this.serial.fetchSerialPorts();
