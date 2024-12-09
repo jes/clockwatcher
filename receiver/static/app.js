@@ -72,6 +72,9 @@ class ClockWatcher {
             this.plots.reset();
             this.redraw();
         });
+        this.ui.onAveragingWindowChange(() => {
+            this.redraw();
+        });
 
         // Add mode switching handler
         this.ui.onModeChange((mode) => {

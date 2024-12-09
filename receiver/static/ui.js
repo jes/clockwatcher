@@ -78,11 +78,9 @@ class UI {
 
         // Add event listener for the averaging window input
         avgWindow.addEventListener('change', () => {
-            // Event will be handled by plots manager
-            const event = new CustomEvent('averaging-window-changed', {
-                detail: { window: this.getAveragingWindow() }
-            });
-            window.dispatchEvent(event);
+            if (this.onAveragingWindowChange) {
+                this.onAveragingWindowChange();
+            }
         });
 
         // Add event listener for the checkbox
@@ -90,11 +88,14 @@ class UI {
             const isEnabled = e.target.checked;
             avgWindow.disabled = !isEnabled;
             
-            // Add/remove a class to style the disabled state
             if (isEnabled) {
                 avgWindowLabel.classList.remove('disabled');
             } else {
                 avgWindowLabel.classList.add('disabled');
+            }
+
+            if (this.onAveragingWindowChange) {
+                this.onAveragingWindowChange();
             }
         });
 
@@ -244,5 +245,9 @@ class UI {
 
         this.elements.modeControls.startTime.value = this.formatDateTime(startTime);
         this.elements.modeControls.endTime.value = this.formatDateTime(now);
+    }
+
+    onAveragingWindowChange(callback) {
+        this.onAveragingWindowChange = callback;
     }
 } 
