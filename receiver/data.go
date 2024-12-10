@@ -2,9 +2,9 @@ package receiver
 
 import (
 	"database/sql"
-	"time"
 	_ "github.com/mattn/go-sqlite3"
 	"math"
+	"log"
 )
 
 type DataPoint struct {
@@ -44,7 +44,6 @@ type ZeroCrossing struct {
 
 // Add this new type to hold historical data
 type HistoricalData struct {
-	Timestamp         int64   `json:"timestamp"`
 	TotalMicros      uint64  `json:"total_micros"`
 	TimestampDrift   int64   `json:"timestamp_drift"`
 	Amplitude        float64 `json:"amplitude"`
@@ -55,6 +54,8 @@ type HistoricalData struct {
 	SHT85Humidity    float64 `json:"sht85_humidity"`
 }
 
+const STEPS_PER_DEGREE = 2
+
 func NewDataRecorder() (*DataRecorder, error) {
 	db, err := sql.Open("sqlite3", "readings.db")
 	if err != nil {
@@ -64,9 +65,7 @@ func NewDataRecorder() (*DataRecorder, error) {
 	// Create table if it doesn't exist
 	_, err = db.Exec(`
 		CREATE TABLE IF NOT EXISTS readings (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			timestamp INTEGER,
-			total_micros INTEGER,
+			total_micros INTEGER PRIMARY KEY,
 			timestamp_drift INTEGER,
 			amplitude REAL,
 			period REAL,
@@ -92,8 +91,9 @@ func (dr *DataRecorder) Close() error {
 }
 
 // AddReading processes a new reading and updates peaks/crossings
-func (dr *DataRecorder) AddReading(reading Reading) {
+func (dr *DataRecorder) AddReading(reading Reading, tareOffset int) {
 	// Store reading in circular buffer
+	reading.Count -= tareOffset / STEPS_PER_DEGREE
 	dr.readings[dr.currentIndex] = reading
 	dr.currentIndex = (dr.currentIndex + 1) % dr.maxReadings
 
@@ -107,7 +107,10 @@ func (dr *DataRecorder) AddReading(reading Reading) {
 
 	// If we just had a new zero crossing and have all the data, write to database
 	if newCrossing {
-		dr.writeToDatabase()
+		err := dr.writeToDatabase()
+		if err != nil {
+			log.Println("Error writing to database:", err)
+		}
 	}
 }
 
@@ -123,8 +126,8 @@ func (dr *DataRecorder) UpdateSHT85(reading SHT85Reading) {
 // Returns true if a new zero crossing was detected
 func (dr *DataRecorder) detectZeroCrossings(reading, prevReading Reading) bool {
 	// Convert counts to degrees
-	current := float64(reading.Count) * 2
-	prev := float64(prevReading.Count) * 2
+	current := float64(reading.Count) * STEPS_PER_DEGREE
+	prev := float64(prevReading.Count) * STEPS_PER_DEGREE
 	currentTime := int64(reading.TotalMicros)
 
 	// Require at least 100ms between zero crossings to avoid noise
@@ -244,7 +247,6 @@ func (dr *DataRecorder) writeToDatabase() error {
 
 	_, err := dr.db.Exec(`
 		INSERT INTO readings (
-			timestamp,
 			total_micros,
 			timestamp_drift,
 			amplitude,
@@ -253,8 +255,7 @@ func (dr *DataRecorder) writeToDatabase() error {
 			bmp180_pressure,
 			sht85_temperature,
 			sht85_humidity
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		time.Now().Unix(),
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 		dr.readings[dr.currentIndex-1].TotalMicros,
 		dr.readings[dr.currentIndex-1].TimestampDrift,
 		amplitude,
@@ -272,7 +273,6 @@ func (dr *DataRecorder) writeToDatabase() error {
 func (dr *DataRecorder) GetHistoricalData(startTime, endTime int64) ([]HistoricalData, error) {
 	rows, err := dr.db.Query(`
 		SELECT 
-			timestamp,
 			total_micros,
 			timestamp_drift,
 			amplitude,
@@ -282,8 +282,8 @@ func (dr *DataRecorder) GetHistoricalData(startTime, endTime int64) ([]Historica
 			sht85_temperature,
 			sht85_humidity
 		FROM readings
-		WHERE timestamp BETWEEN ? AND ?
-		ORDER BY timestamp ASC
+		WHERE total_micros BETWEEN ? AND ?
+		ORDER BY total_micros ASC
 	`, startTime, endTime)
 	if err != nil {
 		return nil, err
@@ -295,7 +295,6 @@ func (dr *DataRecorder) GetHistoricalData(startTime, endTime int64) ([]Historica
 	for rows.Next() {
 		var point HistoricalData
 		err := rows.Scan(
-			&point.Timestamp,
 			&point.TotalMicros,
 			&point.TimestampDrift,
 			&point.Amplitude,

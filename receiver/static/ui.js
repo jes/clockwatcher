@@ -202,8 +202,9 @@ class UI {
     }
 
     handleLoadHistoricalData() {
-        const startTime = new Date(this.elements.modeControls.startTime.value).getTime() / 1000;
-        const endTime = new Date(this.elements.modeControls.endTime.value).getTime() / 1000;
+        // microseconds
+        const startTime = new Date(this.elements.modeControls.startTime.value).getTime() * 1000;
+        const endTime = new Date(this.elements.modeControls.endTime.value).getTime() * 1000;
 
         if (this.onLoadHistoricalData) {
             this.onLoadHistoricalData(startTime, endTime);

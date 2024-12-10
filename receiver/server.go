@@ -103,7 +103,7 @@ func (s *Server) broadcastMessages() {
 		select {
 		case reading := <-s.readings:
 			if s.dataRecorder != nil {
-				s.dataRecorder.AddReading(reading)
+				s.dataRecorder.AddReading(reading, int(s.tareOffset))
 			}
 			s.wsServer.Broadcast(reading)
 		case status := <-s.statusChan:
