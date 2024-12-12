@@ -137,13 +137,14 @@ class Plots {
             xAxisTitle: 'Time (s)',
             yAxisTitle: 'Temperature (°C)',
             mode: 'lines',
-            names: ['BMP180', 'SHT85']
+            names: ['BMP180', 'SHT85', 'BMP390']
         });
         createPlot({
             elementId: 'pressure-chart',
             title: 'Pressure',
             xAxisTitle: 'Time (s)',
-            yAxisTitle: 'Pressure (hPa)'
+            yAxisTitle: 'Pressure (hPa)',
+            names: ['BMP180', 'BMP390']
         });
         createPlot({
             elementId: 'humidity-chart',
@@ -291,13 +292,13 @@ class Plots {
             },*/
             { 
                 id: 'temperature-chart', 
-                x: [data.bmp180Timestamps, data.sht85Timestamps], 
-                y: [data.bmp180Temperatures, data.sht85Temperatures],
+                x: [data.bmp180Timestamps, data.sht85Timestamps, data.bmp390Timestamps], 
+                y: [data.bmp180Temperatures, data.sht85Temperatures, data.bmp390Temperatures],
             },
             { 
                 id: 'pressure-chart', 
-                x: [data.bmp180Timestamps], 
-                y: [data.bmp180Pressures] 
+                x: [data.bmp180Timestamps, data.bmp390Timestamps], 
+                y: [data.bmp180Pressures, data.bmp390Pressures] 
             },
             { 
                 id: 'humidity-chart', 

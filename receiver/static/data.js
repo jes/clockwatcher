@@ -37,6 +37,11 @@ class DataRecorder {
         this.bmp180Pressures = [];
         this.bmp180Timestamps = [];
 
+        // BMP390 sensor data
+        this.bmp390Temperatures = [];
+        this.bmp390Pressures = [];
+        this.bmp390Timestamps = [];
+
         // SHT85 sensor data
         this.sht85Temperatures = [];
         this.sht85Humidities = [];
@@ -87,6 +92,14 @@ class DataRecorder {
 
     getCurrentBMP180Pressure() {
         return this.bmp180Pressures[this.bmp180Pressures.length - 1] || 0;
+    }
+
+    getCurrentBMP390Temperature() {
+        return this.bmp390Temperatures[this.bmp390Temperatures.length - 1] || 0;
+    }
+
+    getCurrentBMP390Pressure() {
+        return this.bmp390Pressures[this.bmp390Pressures.length - 1] || 0;
     }
 
     getCurrentSHT85Temperature() {
@@ -172,6 +185,29 @@ class DataRecorder {
             this.bmp180Temperatures = this.bmp180Temperatures.slice(-this.maxPoints);
             this.bmp180Pressures = this.bmp180Pressures.slice(-this.maxPoints);
             this.bmp180Timestamps = this.bmp180Timestamps.slice(-this.maxPoints);
+        }
+    }
+
+    addBMP390Reading(message) {
+        if (this.mode !== 'live') {
+            return;
+        }
+        if (message.type !== 'BMP390') return;
+
+        if (this.timeOffset == null) {
+            this.timeOffset = message.timestamp / 1000000;
+        }
+        const timeSeconds = (message.timestamp / 1000000) - this.timeOffset;
+
+        this.bmp390Temperatures.push(message.temperature);
+        this.bmp390Pressures.push(message.pressure);
+        this.bmp390Timestamps.push(timeSeconds);
+
+        // Keep arrays at maxPoints length
+        if (this.bmp390Temperatures.length > this.maxPoints) {
+            this.bmp390Temperatures = this.bmp390Temperatures.slice(-this.maxPoints);
+            this.bmp390Pressures = this.bmp390Pressures.slice(-this.maxPoints);
+            this.bmp390Timestamps = this.bmp390Timestamps.slice(-this.maxPoints);
         }
     }
 

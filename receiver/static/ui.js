@@ -30,8 +30,10 @@ class UI {
                 positivePeak: document.getElementById('positive-peak'),
                 negativePeak: document.getElementById('negative-peak'),
                 currentTemperatureBMP180: document.getElementById('current-temperature-bmp180'),
+                currentTemperatureBMP390: document.getElementById('current-temperature-bmp390'),
                 currentTemperatureSHT85: document.getElementById('current-temperature-sht85'),
                 currentPressure: document.getElementById('current-pressure'),
+                currentPressureBMP390: document.getElementById('current-pressure-bmp390'),
                 currentHumidity: document.getElementById('current-humidity')
             },
             modeControls: {
@@ -155,8 +157,10 @@ class UI {
         displays.positivePeak.textContent = `+${data.getPositiveAmplitude().toFixed(2)}°`;
         displays.negativePeak.textContent = `${data.getNegativeAmplitude().toFixed(2)}°`;
         displays.currentTemperatureBMP180.textContent = `${data.getCurrentBMP180Temperature().toFixed(2)} °C`;
+        displays.currentTemperatureBMP390.textContent = `${data.getCurrentBMP390Temperature().toFixed(2)} °C`;
         displays.currentTemperatureSHT85.textContent = `${data.getCurrentSHT85Temperature().toFixed(2)} °C`;
         displays.currentPressure.textContent = `${data.getCurrentBMP180Pressure().toFixed(2)} hPa`;
+        displays.currentPressureBMP390.textContent = `${data.getCurrentBMP390Pressure().toFixed(2)} hPa`;
         displays.currentHumidity.textContent = `${data.getCurrentSHT85Humidity().toFixed(2)} %`;
     }
     

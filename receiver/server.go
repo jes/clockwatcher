@@ -18,14 +18,23 @@ type Server struct {
 	serialPort serial.Port
 	serialMux  sync.Mutex
 	tareOffset int
-	bmp        *BMP180
-	bmpReadings chan BMP180Reading
-	sht        *SHT85
-	shtReadings chan SHT85Reading
-	dataRecorder *DataRecorder
+	bmp180        *BMP180
+	bmp180Readings chan BMP180Reading
+	bmp390        *BMP390
+	bmp390Readings chan BMP390Reading
+	sht           *SHT85
+	shtReadings   chan SHT85Reading
+	dataRecorder  *DataRecorder
 }
 
 type BMP180Reading struct {
+    Type        string  `json:"type"`
+    Temperature float64 `json:"temperature"`
+    Pressure    float64 `json:"pressure"`
+    Timestamp   int64   `json:"timestamp"`
+}
+
+type BMP390Reading struct {
     Type        string  `json:"type"`
     Temperature float64 `json:"temperature"`
     Pressure    float64 `json:"pressure"`
@@ -43,7 +52,8 @@ func NewServer() *Server {
 	s := &Server{
 		readings:     make(chan Reading),
 		statusChan:   make(chan StatusMessage),
-		bmpReadings:  make(chan BMP180Reading),
+		bmp180Readings:  make(chan BMP180Reading),
+		bmp390Readings:  make(chan BMP390Reading),
 		shtReadings:  make(chan SHT85Reading),
 	}
 	dr, err := NewDataRecorder()
@@ -57,11 +67,18 @@ func NewServer() *Server {
 	ws.server = s
 	s.wsServer = ws
 
-	bmp, err := NewBMP180()
+	bmp180, err := NewBMP180()
 	if err != nil {
 		log.Printf("Failed to initialize BMP180: %v", err)
 	} else {
-		s.bmp = bmp
+		s.bmp180 = bmp180
+	}
+
+	bmp390, err := NewBMP390()
+	if err != nil {
+		log.Printf("Failed to initialize BMP390: %v", err)
+	} else {
+		s.bmp390 = bmp390
 	}
 
 	sht, err := NewSHT85()
@@ -85,8 +102,13 @@ func (s *Server) Start() {
 	go s.broadcastMessages()
 
 	// Start BMP180 monitoring if available
-	if s.bmp != nil {
+	if s.bmp180 != nil {
 		go s.monitorBMP180()
+	}
+
+	// Start BMP390 monitoring if available
+	if s.bmp390 != nil {
+		go s.monitorBMP390()
 	}
 
 	// Start SHT85 monitoring if available
@@ -108,11 +130,16 @@ func (s *Server) broadcastMessages() {
 			s.wsServer.Broadcast(reading)
 		case status := <-s.statusChan:
 			s.wsServer.Broadcast(status)
-		case bmpReading := <-s.bmpReadings:
+		case bmp180Reading := <-s.bmp180Readings:
 			if s.dataRecorder != nil {
-				s.dataRecorder.UpdateBMP180(bmpReading)
+				s.dataRecorder.UpdateBMP180(bmp180Reading)
 			}
-			s.wsServer.Broadcast(bmpReading)
+			s.wsServer.Broadcast(bmp180Reading)
+		case bmp390Reading := <-s.bmp390Readings:
+			if s.dataRecorder != nil {
+				s.dataRecorder.UpdateBMP390(bmp390Reading)
+			}
+			s.wsServer.Broadcast(bmp390Reading)
 		case shtReading := <-s.shtReadings:
 			if s.dataRecorder != nil {
 				s.dataRecorder.UpdateSHT85(shtReading)
@@ -218,7 +245,7 @@ func (s *Server) monitorBMP180() {
     defer ticker.Stop()
 
     for range ticker.C {
-        temp, pressure, err := s.bmp.ReadTemperaturePressure()
+        temp, pressure, err := s.bmp180.ReadTemperaturePressure()
         if err != nil {
             log.Printf("Error reading BMP180: %v", err)
             continue
@@ -231,8 +258,30 @@ func (s *Server) monitorBMP180() {
             Timestamp:   time.Now().UnixMicro(),
         }
 
-        s.bmpReadings <- reading
+        s.bmp180Readings <- reading
     }
+}
+
+func (s *Server) monitorBMP390() {
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		temp, pressure, err := s.bmp390.ReadTemperaturePressure()
+		if err != nil {
+			log.Printf("Error reading BMP390: %v", err)
+			continue
+		}
+
+		reading := BMP390Reading{
+			Type:        "BMP390",
+			Temperature: temp,
+			Pressure:    pressure,
+			Timestamp:   time.Now().UnixMicro(),
+		}
+
+		s.bmp390Readings <- reading
+	}
 }
 
 func (s *Server) monitorSHT85() {

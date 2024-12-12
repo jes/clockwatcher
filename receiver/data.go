@@ -7,17 +7,6 @@ import (
 	"log"
 )
 
-type DataPoint struct {
-	TotalMicros       uint64
-	TimestampDrift    int64
-	Amplitude         float64
-	Period            float64
-	BMP180Temperature float64
-	BMP180Pressure    float64
-	SHT85Temperature  float64
-	SHT85Humidity     float64
-}
-
 type DataRecorder struct {
 	db                *sql.DB
 	readings          []Reading    // Circular buffer for recent readings
@@ -27,6 +16,7 @@ type DataRecorder struct {
 	lastNegativePeak  *Peak
 	lastZeroCrossing  *ZeroCrossing
 	lastBMP180        *BMP180Reading
+	lastBMP390        *BMP390Reading
 	lastSHT85         *SHT85Reading
 	positiveHalfPeriod float64
 	negativeHalfPeriod float64
@@ -50,6 +40,8 @@ type HistoricalData struct {
 	Period           float64 `json:"period"`
 	BMP180Temperature float64 `json:"bmp180_temperature"`
 	BMP180Pressure   float64 `json:"bmp180_pressure"`
+	BMP390Temperature float64 `json:"bmp390_temperature"`
+	BMP390Pressure   float64 `json:"bmp390_pressure"`
 	SHT85Temperature float64 `json:"sht85_temperature"`
 	SHT85Humidity    float64 `json:"sht85_humidity"`
 }
@@ -71,6 +63,8 @@ func NewDataRecorder() (*DataRecorder, error) {
 			period REAL,
 			bmp180_temperature REAL,
 			bmp180_pressure REAL,
+			bmp390_temperature REAL,
+			bmp390_pressure REAL,
 			sht85_temperature REAL,
 			sht85_humidity REAL
 		)
@@ -116,6 +110,10 @@ func (dr *DataRecorder) AddReading(reading Reading, tareOffset int) {
 
 func (dr *DataRecorder) UpdateBMP180(reading BMP180Reading) {
 	dr.lastBMP180 = &reading
+}
+
+func (dr *DataRecorder) UpdateBMP390(reading BMP390Reading) {
+	dr.lastBMP390 = &reading
 }
 
 func (dr *DataRecorder) UpdateSHT85(reading SHT85Reading) {
@@ -235,10 +233,14 @@ func (dr *DataRecorder) writeToDatabase() error {
 	period := dr.positiveHalfPeriod + dr.negativeHalfPeriod
 	amplitude := dr.lastPositivePeak.Position - dr.lastNegativePeak.Position
 
-	var bmpTemp, bmpPressure, shtTemp, shtHumidity float64
+	var bmp180Temp, bmp180Pressure, bmp390Temp, bmp390Pressure, shtTemp, shtHumidity float64
 	if dr.lastBMP180 != nil {
-		bmpTemp = dr.lastBMP180.Temperature
-		bmpPressure = dr.lastBMP180.Pressure
+		bmp180Temp = dr.lastBMP180.Temperature
+		bmp180Pressure = dr.lastBMP180.Pressure
+	}
+	if dr.lastBMP390 != nil {
+		bmp390Temp = dr.lastBMP390.Temperature
+		bmp390Pressure = dr.lastBMP390.Pressure
 	}
 	if dr.lastSHT85 != nil {
 		shtTemp = dr.lastSHT85.Temperature
@@ -253,15 +255,19 @@ func (dr *DataRecorder) writeToDatabase() error {
 			period,
 			bmp180_temperature,
 			bmp180_pressure,
+			bmp390_temperature,
+			bmp390_pressure,
 			sht85_temperature,
 			sht85_humidity
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		dr.readings[dr.currentIndex-1].TotalMicros,
 		dr.readings[dr.currentIndex-1].TimestampDrift,
 		amplitude,
 		period,
-		bmpTemp,
-		bmpPressure,
+		bmp180Temp,
+		bmp180Pressure,
+		bmp390Temp,
+		bmp390Pressure,
 		shtTemp,
 		shtHumidity,
 	)
@@ -269,7 +275,6 @@ func (dr *DataRecorder) writeToDatabase() error {
 	return err
 }
 
-// Add this new method to DataRecorder
 func (dr *DataRecorder) GetHistoricalData(startTime, endTime int64) ([]HistoricalData, error) {
 	rows, err := dr.db.Query(`
 		SELECT 
@@ -279,6 +284,8 @@ func (dr *DataRecorder) GetHistoricalData(startTime, endTime int64) ([]Historica
 			period,
 			bmp180_temperature,
 			bmp180_pressure,
+			bmp390_temperature,
+			bmp390_pressure,
 			sht85_temperature,
 			sht85_humidity
 		FROM readings
@@ -301,6 +308,8 @@ func (dr *DataRecorder) GetHistoricalData(startTime, endTime int64) ([]Historica
 			&point.Period,
 			&point.BMP180Temperature,
 			&point.BMP180Pressure,
+			&point.BMP390Temperature,
+			&point.BMP390Pressure,
 			&point.SHT85Temperature,
 			&point.SHT85Humidity,
 		)
