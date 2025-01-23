@@ -259,7 +259,7 @@ func (dr *DataRecorder) writeToDatabase() error {
 			bmp390_pressure,
 			sht85_temperature,
 			sht85_humidity
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		dr.readings[dr.currentIndex-1].TotalMicros,
 		dr.readings[dr.currentIndex-1].TimestampDrift,
 		amplitude,
