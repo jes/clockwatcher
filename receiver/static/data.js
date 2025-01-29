@@ -238,7 +238,6 @@ class DataRecorder {
     }
 
     calculateFiniteDifference(array, step) {
-        const halfStep = Math.floor(step / 2);
         if (array.length < step + 1) return 0;
         
         // Use the most recent point and a point 'step' positions back
