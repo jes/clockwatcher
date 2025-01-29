@@ -46,6 +46,9 @@ class DataRecorder {
         this.sht85Temperatures = [];
         this.sht85Humidities = [];
         this.sht85Timestamps = [];
+
+        // Add new array for temperatures sampled at period/amplitude points
+        this.sampledBMP390Temperatures = [];
     }
 
     tare() {
@@ -277,6 +280,9 @@ class DataRecorder {
         const amplitude = this.lastPositivePeak - this.lastNegativePeak;
         const currentTime = this.timestamps[this.timestamps.length - 1];
         
+        // Get the current temperature
+        const currentTemp = this.getCurrentBMP390Temperature();
+        
         this.periodData.push(period);
         this.periodTimestamps.push(currentTime);
         
@@ -292,6 +298,9 @@ class DataRecorder {
 
         this.amplitudeData.push(amplitude);
         this.amplitudeTimestamps.push(currentTime);
+        
+        // Store temperature at the same sampling points as period/amplitude
+        this.sampledBMP390Temperatures.push(currentTemp);
     }
 
     detectZeroCrossings(current, prev, currentTime) {
@@ -413,6 +422,7 @@ class DataRecorder {
         this.sht85Temperatures = this.sht85Temperatures.slice(-this.maxPoints);
         this.sht85Humidities = this.sht85Humidities.slice(-this.maxPoints);
         this.sht85Timestamps = this.sht85Timestamps.slice(-this.maxPoints);
+        this.sampledBMP390Temperatures = this.sampledBMP390Temperatures.slice(-this.maxPoints);
     }
 
     setMode(mode) {

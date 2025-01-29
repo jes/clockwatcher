@@ -24,7 +24,8 @@ class Plots {
             amplitudeRateData: 0,
             temperatureData: 0,
             pressureData: 0,
-            humidityData: 0
+            humidityData: 0,
+            sampledBMP390Temperatures: 0
         };
 
         this.plotStates = {};
@@ -130,6 +131,23 @@ class Plots {
             mode: 'markers'
         });
 
+        // Add new correlation plots
+        createPlot({
+            elementId: 'temperature-period-chart-avg',
+            title: 'Temperature vs Period',
+            xAxisTitle: 'Temperature BMP390 (°C)',
+            yAxisTitle: 'Period (s)',
+            mode: 'markers'
+        });
+
+        createPlot({
+            elementId: 'temperature-amplitude-chart-avg',
+            title: 'Temperature vs Amplitude',
+            xAxisTitle: 'Temperature BMP390 (°C)',
+            yAxisTitle: 'Amplitude (degrees)',
+            mode: 'markers'
+        });
+
         // Environmental measurements
         createPlot({
             elementId: 'temperature-chart',
@@ -216,6 +234,7 @@ class Plots {
             this.avgAmplitude = this.movingAverage(data.amplitudeData, avgWindow);
             this.avgPeriod = this.movingAverage(data.periodData, avgWindow);
             this.avgAmplitudeRate = this.movingAverage(data.amplitudeRateData, avgWindow);
+            this.avgSampledTemperature = this.movingAverage(data.sampledBMP390Temperatures, avgWindow);
             this.lastAvgWindow = avgWindow;
         } else {
             this.avgAmplitude = this.updateMovingAverage(
@@ -238,6 +257,13 @@ class Plots {
                 avgWindow, 
                 this.prevLengths.amplitudeRateData
             );
+
+            this.avgSampledTemperature = this.updateMovingAverage(
+                data.sampledBMP390Temperatures,
+                this.avgSampledTemperature,
+                avgWindow,
+                this.prevLengths.sampledBMP390Temperatures
+            );
         }
 
         // Update previous lengths
@@ -246,7 +272,8 @@ class Plots {
             accelerations: data.accelerations.length,
             amplitudeData: data.amplitudeData.length,
             periodData: data.periodData.length,
-            amplitudeRateData: data.amplitudeRateData.length
+            amplitudeRateData: data.amplitudeRateData.length,
+            sampledBMP390Temperatures: data.sampledBMP390Temperatures.length
         };
 
         const updates = [
@@ -284,6 +311,17 @@ class Plots {
                 id: 'amplitude-period-chart-avg', 
                 x: [this.avgAmplitude], 
                 y: [this.avgPeriod] 
+            },
+            // Add new correlation plots
+            { 
+                id: 'temperature-period-chart-avg', 
+                x: [this.avgSampledTemperature], 
+                y: [this.avgPeriod] 
+            },
+            { 
+                id: 'temperature-amplitude-chart-avg', 
+                x: [this.avgSampledTemperature], 
+                y: [this.avgAmplitude] 
             },
             /*{ 
                 id: 'position-velocity-chart', 
