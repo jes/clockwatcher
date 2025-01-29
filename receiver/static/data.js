@@ -474,10 +474,20 @@ class DataRecorder {
                     this.bmp180Pressures.push(point.bmp180_pressure);
                     this.bmp180Timestamps.push(timeSeconds - this.timeOffset);
                 }
+                if (point.bmp390_temperature !== null) {
+                    this.bmp390Temperatures.push(point.bmp390_temperature);
+                    this.bmp390Pressures.push(point.bmp390_pressure);
+                    this.bmp390Timestamps.push(timeSeconds - this.timeOffset);
+                }
                 if (point.sht85_temperature !== null) {
                     this.sht85Temperatures.push(point.sht85_temperature);
                     this.sht85Humidities.push(point.sht85_humidity);
                     this.sht85Timestamps.push(timeSeconds - this.timeOffset);
+                }
+
+                // Add sampled temperature for correlation plots when we have a new period or amplitude measurement
+                if (point.period !== null || point.amplitude !== null) {
+                    this.sampledBMP390Temperatures.push(point.bmp390_temperature);
                 }
             });
 
