@@ -34,21 +34,53 @@ class Plots {
     initializePlots() {
         const createPlot = ({ elementId, title, xAxisTitle, yAxisTitle, mode = 'lines', names = [title] }) => {
             const layout = {
-                autosize: true,
-                responsive: true,
-                margin: { l: 50, r: 50, t: 40, b: 40 },
-                width: null,
-                height: 400,
-                title,
-                xaxis: { title: xAxisTitle },
-                yaxis: { title: yAxisTitle }
+                autosize: false,
+                width: 300,  // Increased from 250
+                height: 180, // Increased from 150
+                margin: { l: 35, r: 8, t: 25, b: 25 },  // Slightly larger margins
+                title: {
+                    text: title,
+                    font: { size: 11 }
+                },
+                xaxis: { 
+                    title: xAxisTitle,
+                    titlefont: { size: 9 },
+                    tickfont: { size: 8 },
+                    showgrid: false,
+                    ticks: 'outside',
+                    showline: true
+                },
+                yaxis: { 
+                    title: yAxisTitle,
+                    titlefont: { size: 9 },
+                    tickfont: { size: 8 },
+                    showgrid: false,
+                    ticks: 'outside',
+                    showline: true
+                },
+                showlegend: false,
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)'
             };
+
+            if (names.length > 1) {
+                layout.showlegend = true;
+                layout.legend = {
+                    font: { size: 8 },
+                    yanchor: 'top',
+                    y: 0.99,
+                    xanchor: 'left',
+                    x: 0.01
+                };
+            }
 
             const traces = names.map(name => ({
                 x: [],
                 y: [],
                 mode,
-                name
+                name,
+                line: { width: 0.5 },
+                marker: { size: 2 }
             }));
 
             Plotly.newPlot(elementId, traces, layout, { 
