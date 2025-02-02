@@ -154,8 +154,14 @@ func (dr *DataRecorder) detectZeroCrossings(reading, prevReading Reading) bool {
 
 // detectPeaks uses quadratic interpolation to find precise peak locations
 func (dr *DataRecorder) detectPeaks() {
-	// Need at least 3 points for quadratic interpolation
-	if dr.currentIndex < 3 {
+	// Check if we have at least 3 readings in total
+	numReadings := 0
+	for i := 0; i < dr.maxReadings; i++ {
+		if dr.readings[i].TotalMicros != 0 {
+			numReadings++
+		}
+	}
+	if numReadings < 3 {
 		return
 	}
 
@@ -260,8 +266,8 @@ func (dr *DataRecorder) writeToDatabase() error {
 			sht85_temperature,
 			sht85_humidity
 		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		dr.readings[dr.currentIndex-1].TotalMicros,
-		dr.readings[dr.currentIndex-1].TimestampDrift,
+		dr.readings[(dr.currentIndex-1+dr.maxReadings)%dr.maxReadings].TotalMicros,
+		dr.readings[(dr.currentIndex-1+dr.maxReadings)%dr.maxReadings].TimestampDrift,
 		amplitude,
 		period,
 		bmp180Temp,
